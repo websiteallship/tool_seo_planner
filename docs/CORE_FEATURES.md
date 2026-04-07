@@ -26,13 +26,13 @@
 - [ ] Status badges: active / paused / completed / archived
 
 ### M2 · Keyword Research & Mapping
-- [ ] Bulk import keywords từ CSV (paste hoặc upload)
-- [ ] Smart table: sort, filter, search, pagination
-- [ ] Cluster view: group by topic cluster (collapsible)
-- [ ] Intent badges: color-coded (info / commercial / transactional / nav)
-- [ ] Mapping panel: gán keyword → URL từ silo
-- [ ] Cannibalization detector: highlight 2+ keywords cùng URL + intent
-- [ ] Stats cards: tổng, mapped %, phân bổ intent (pie chart)
+- [x] Bulk import keywords từ CSV (paste hoặc upload)
+- [x] Smart table: sort, filter, search, pagination
+- [x] Cluster view: group by topic cluster (collapsible)
+- [x] Intent badges: color-coded (info / commercial / transactional / nav)
+- [x] Mapping panel: gán keyword → URL từ silo
+- [x] Cannibalization detector: highlight 2+ keywords cùng URL + intent
+- [x] Stats cards: tổng, mapped %, phân bổ intent (pie chart)
 
 ### M3 · Silo Architecture & URL Structure
 - [ ] Tree view: hierarchy trực quan (collapse/expand)

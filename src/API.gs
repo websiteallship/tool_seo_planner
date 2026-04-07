@@ -19,13 +19,20 @@ function dispatch(action, params) {
     'project.duplicate':    () => ProjectService.duplicate(params.projectId),
 
     // ── Keyword Research (M2) ────────────────────────────────
-    'keyword.getAll':       () => KeywordService.getAll(params.projectId),
-    'keyword.add':          () => KeywordService.add(params.projectId, params.data),
-    'keyword.bulkAdd':      () => KeywordService.bulkAdd(params.projectId, params.rows),
-    'keyword.update':       () => KeywordService.update(params.projectId, params.keywordId, params.data),
-    'keyword.delete':       () => KeywordService.delete(params.projectId, params.keywordId),
-    'keyword.classify':     () => KeywordService.classifyIntent(params.keywords),
-    'keyword.applyIntents': () => KeywordService.applyIntents(params.projectId, params.updates),
+    'keyword.getAll':              () => KeywordService.getAll(params.projectId),
+    'keyword.add':                 () => KeywordService.add(params.projectId, params.data, params.overwrite),
+    'keyword.bulkImport':          () => KeywordService.bulkImport(params.projectId, params.rows, params.overwrite),
+    'keyword.update':              () => KeywordService.update(params.projectId, params.keywordId, params.data),
+    'keyword.delete':              () => KeywordService.delete(params.projectId, params.keywordId),
+    'keyword.mapToSilo':           () => KeywordService.mapToSilo(params.projectId, params.keywordId, params.siloId, params.targetUrl),
+    'keyword.unmapFromSilo':       () => KeywordService.unmapFromSilo(params.projectId, params.keywordId),
+    'keyword.detectCannibalization': () => KeywordService.detectCannibalization(params.projectId),
+    'keyword.getStats':            () => KeywordService.getStats(params.projectId),
+    'keyword.classify':            () => KeywordService.classifyIntent(params.keywords),
+    'keyword.applyIntents':        () => KeywordService.applyIntents(params.projectId, params.updates),
+    'keyword.suggestClusters':     () => KeywordService.suggestClusters(params.projectId, params.niche),
+    'keyword.applyClusters':       () => KeywordService.applyClusters(params.projectId, params.clusters),
+    'keyword.bulkUpdate':          () => KeywordService.bulkUpdate(params.projectId, params.keywordIds, params.data),
 
     // ── Silo Architecture (M3) ───────────────────────────────
     'silo.getTree':         () => SiloService.getTree(params.projectId),

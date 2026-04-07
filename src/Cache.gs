@@ -2,11 +2,13 @@
 // Tránh gọi Sheet/API nhiều lần trong 1 request cycle
 
 const CACHE_TTL = {
-  rate_card: 3600,    // 1 giờ
-  config: 600,        // 10 phút
-  silo_tree: 300,     // 5 phút
-  keywords: 60,       // 1 phút
-  gsc_properties: 3600
+  rate_card:        3600, // 1 giờ
+  config:            600, // 10 phút
+  silo_tree:         300, // 5 phút
+  keywords:           60, // 1 phút
+  cannibalization:   120, // 2 phút — computed từ keywords, không thay đổi nhiều
+  keyword_stats:     120, // 2 phút — computed từ keywords
+  gsc_properties:   3600,
 };
 
 /**

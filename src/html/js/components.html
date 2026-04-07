@@ -34,13 +34,33 @@ function pagination(allItems, pageSize = 50) {
  * @returns {Object[]}
  */
 function parseCSV(csvText, headers = null) {
+  // Parse 1 dòng CSV theo chuẩn RFC 4180 — handle quoted fields có dấu phẩy/newline
+  function parseLine(line) {
+    const values = [];
+    let cur = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuote) {
+        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; } // escaped quote ""
+        else if (ch === '"') { inQuote = false; }
+        else { cur += ch; }
+      } else {
+        if (ch === '"') { inQuote = true; }
+        else if (ch === ',') { values.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+    }
+    values.push(cur.trim());
+    return values;
+  }
+
   const lines = csvText.trim().split('\n').map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) return [];
-  const headerRow = headers || lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
+  const headerRow = headers || parseLine(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_'));
   const dataLines = headers ? lines : lines.slice(1);
   return dataLines.map(line => {
-    const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-    return Object.fromEntries(headerRow.map((h, i) => [h, values[i] || '']));
+    const values = parseLine(line);
+    return Object.fromEntries(headerRow.map((h, i) => [h, values[i] ?? '']));
   });
 }
 

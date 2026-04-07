@@ -6,8 +6,28 @@
 
 ## [Unreleased]
 
-- Keyword Research module (M2)
 - Silo Architecture module (M3)
+- Basic Dashboard module (M11)
+
+---
+
+## v0.4.0 — 2026-04-07
+
+### Added
+- [M2] Hoàn thiện toàn bộ Module Keyword Research & Mapping (Milestone 1.2) với đầy đủ các tính năng.
+- [M2] Cải tiến tính năng Duplicate Detection & Overwrite Mode (phát hiện trùng lặp case-insensitive) cho cả Add Manual và CSV Import. Tích hợp validation inline trên UI.
+- [M2] Tính năng Bulk Import từ CSV mạnh mẽ (chế độ Clipboard Paste & File Upload) với grid preview 5 rows, custom parse CSV engine bắt lỗi ngoặc kép.
+- [M2] Tính năng AI Clustering và AI Classify Intent (tích hợp Gemini API) tự động phân nhóm và intent hàng loạt thông qua Preview Panel trung gian.
+- [M2] Smart Data Table: Selection hàng loạt, Bulk Actions (đổi Status, Intent, Cụm Cluster), Pagination stateful.
+- [M2] Cannibalization Check: Tự động highlight đỏ cho các từ khoá chung 1 target_url và intent kèm cảnh báo chi tiết.
+- [M2] Bảng Sidebar Mapping Panel: Gán keywords vào hệ thống cấu trúc Silo trực quan & tiện dụng.
+- [M2] Tính năng Export CSV hỗ trợ xuất bản theo danh sách filtered list hoặc specific selection.
+
+### Fixed
+- [M2] Lỗi giao diện modal của Shoelace bị cắt xén (clip boundary) do bị giới hạn bởi wrapper DOM layer; giải quyết bằng cách release layer cha.
+- [M2] Bug F5 báo lỗi `Project not found: null` thay vì gọi lại data; xử lý bằng cập nhật AlpineJS `$data` API & restore qua session local state cache.
+- [M2] Lỗi hiển thị subtitle (vẫn báo Loading khi chưa chọn dự án) và thiếu highlight màu cam cảnh báo trùng keyword ở bảng CSV preview.
+- [M2] Vi phạm quy tắc UI khi cho phép hiển thị Emoji tại dropdown Priority; thay thế bằng text thuần theo chuẩn Lucide-only.
 
 ---
 

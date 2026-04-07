@@ -38,13 +38,13 @@ Phase 5 [WP Integration]  → ⬜ Chưa bắt đầu
 - [x] `html/css/styles.html` — Tailwind overrides, custom classes
 
 ### Milestone 1.2 — Keyword Research
-- [ ] `KeywordService.gs` — getAll, bulkImport, update, mapToSilo, detectCannibalization
-- [ ] `html/pages/keywords.html` — smart table, filters, stats cards
-- [ ] CSV import: paste textarea + parse + preview + confirm
-- [ ] Intent badges (4 màu)
-- [ ] Mapping panel (right sidebar)
-- [ ] Cannibalization highlight
-- [ ] AI Classify Intent (preview-first pattern)
+- [x] `KeywordService.gs` — getAll, bulkImport, update, mapToSilo, detectCannibalization
+- [x] `html/pages/keywords.html` — smart table, filters, stats cards
+- [x] CSV import: paste textarea + parse + preview + confirm
+- [x] Intent badges (4 màu)
+- [x] Mapping panel (right sidebar)
+- [x] Cannibalization highlight
+- [x] AI Classify Intent (preview-first pattern)
 
 ### Milestone 1.3 — Silo Architecture
 - [ ] `SiloService.gs` — getTree, addNode, moveNode, updateMetadata

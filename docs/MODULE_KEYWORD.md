@@ -6,9 +6,11 @@
 ```
 Planner paste CSV (từ Ahrefs/SEMrush) hoặc upload file
   → Frontend parse: header map tự động (keyword, volume, KD, CPC)
-  → Preview bảng 10 rows đầu → Confirm
+  → ImportDuplicates computed check trùng bằng keyword text (case-insensitive)
+  → Preview bảng 10 rows đầu (highlight row trùng bằng viền cam)
+  → Confirm vởi checkbox "Overwrite duplicates" (hiển thị khi có trùng lặp)
   → Batch write vào keywords sheet, status mặc định = "researching"
-  → Thông báo: "Đã import {n} keywords"
+  → Thông báo chi tiết: "Imported {x} new, updated {y}, skipped {z} duplicates"
 ```
 
 ### 2. AI Classify Intent
@@ -43,6 +45,14 @@ Sau mỗi lần update mapping:
   → Group keywords by target_url
   → Flag nếu 2+ keywords có cùng target_url + cùng intent
   → Highlight màu đỏ + tooltip cảnh báo
+```
+
+### 6. Duplicate Detection (Inline)
+```
+Planner gõ Add Keyword manual
+  → Hàm checkDuplicate() chạy debounced 350ms
+  → Hiển thị cảnh báo trực quan nếu keyword tồn tại (bao gồm status và mapped URL)
+  → Planner check "Overwrite" để tiến hành cập nhật thay vì skip
 ```
 
 ### Quy Tắc Nghiệp Vụ
@@ -92,13 +102,21 @@ Sau mỗi lần update mapping:
 
 ```javascript
 KeywordService.getAll(projectId)
-KeywordService.bulkImport(projectId, rows[])
-KeywordService.mapToSilo(projectId, keywordId, siloId)
+KeywordService.add(projectId, data, overwrite)
+KeywordService.bulkImport(projectId, rows[], overwrite)
+KeywordService.update(projectId, keywordId, data)
+KeywordService.delete(projectId, keywordId)
+KeywordService.mapToSilo(projectId, keywordId, siloId, targetUrl)
+KeywordService.unmapFromSilo(projectId, keywordId)
 KeywordService.detectCannibalization(projectId)
+KeywordService.getStats(projectId)
+KeywordService.bulkUpdate(projectId, keywordIds[], data)
 
 AIService.classifyIntentBatch(keywords[])
 // → [{keyword, intent, confidence, reasoning}]
 
-AIService.suggestClusters(keywords[], niche)
+KeywordService.suggestClusters(projectId, niche)
 // → [{cluster_name, keywords[], rationale}]
+
+KeywordService.applyClusters(projectId, clusters[])
 ```
