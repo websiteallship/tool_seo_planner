@@ -16,6 +16,14 @@
         <i data-lucide="download" class="w-3.5 h-3.5" slot="prefix"></i>
         <span class="hidden sm:inline">Export CSV</span>
       </sl-button>
+      <sl-button size="small" variant="default" :loading="classifyingAll"
+        x-show="unclassifiedCount > 0"
+        @click="classifyUnclassified()"
+        :title="`Classify ${unclassifiedCount} keywords without intent`">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5" slot="prefix"></i>
+        <span class="hidden sm:inline">AI Classify</span>
+        <sl-badge variant="neutral" pill x-text="unclassifiedCount" class="ml-1"></sl-badge>
+      </sl-button>
       <sl-button size="small" variant="default" :loading="clustering" @click="suggestClusters()">
         <i data-lucide="layers" class="w-3.5 h-3.5" slot="prefix"></i>
         <span class="hidden sm:inline">AI Clusters</span>
@@ -90,29 +98,69 @@
     </div>
   </template>
 
-  <!-- AI Preview Panel -->
+  <!-- AI Intent Classification Preview Panel -->
   <template x-if="aiPreview">
     <div class="ts-ai-preview-panel mb-4">
-      <div class="ts-ai-badge">
-        <i data-lucide="sparkles" class="w-4 h-4"></i>
-        AI Intent Classification — Review before applying
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+        <div class="ts-ai-badge">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          AI Intent Classification
+          <span class="ml-1 text-indigo-400 font-normal">— Review &amp; edit before applying</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <span class="text-green-600 font-medium" x-text="aiPreview.filter(p => p.confidence === 'high').length + ' high'"></span>
+          <span class="text-amber-500" x-text="aiPreview.filter(p => p.confidence === 'medium').length + ' medium'"></span>
+          <span class="text-red-400" x-text="aiPreview.filter(p => p.confidence === 'low').length + ' low'"></span>
+        </div>
       </div>
-      <div class="mt-3 space-y-2 max-h-60 overflow-y-auto">
+
+      <!-- Rows: keyword + intent selector + confidence + reason -->
+      <div class="mt-3 space-y-0 max-h-72 overflow-y-auto border border-slate-100 rounded-lg divide-y divide-slate-100">
         <template x-for="(item, idx) in aiPreview" :key="idx">
-          <div class="flex items-center gap-3 text-sm py-1.5 border-b border-slate-100">
-            <span class="flex-1 text-slate-700 truncate" x-text="item.keyword"></span>
-            <span class="ts-badge-intent shrink-0" :class="`ts-badge-${item.intent}`" x-text="item.intent"></span>
-            <span class="text-xs shrink-0" :class="item.confidence === 'high' ? 'text-green-600' : item.confidence === 'low' ? 'text-red-500' : 'text-amber-500'" x-text="item.confidence"></span>
-            <span class="text-xs text-slate-400 max-w-32 truncate" x-text="item.reason"></span>
+          <div class="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 transition-colors">
+            <!-- Keyword -->
+            <span class="flex-1 text-sm text-slate-700 truncate min-w-0" x-text="item.keyword"></span>
+
+            <!-- Inline intent editor -->
+            <select
+              :id="'ai-intent-' + idx"
+              x-model="aiPreview[idx].intent"
+              class="text-xs border border-slate-200 rounded-md px-2 py-1 bg-white focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none shrink-0"
+              :class="{
+                'border-blue-300 bg-blue-50': item.intent === 'informational',
+                'border-orange-300 bg-orange-50': item.intent === 'commercial',
+                'border-green-300 bg-green-50': item.intent === 'transactional',
+                'border-slate-300 bg-slate-50': item.intent === 'navigational',
+              }">
+              <option value="informational">informational</option>
+              <option value="commercial">commercial</option>
+              <option value="transactional">transactional</option>
+              <option value="navigational">navigational</option>
+            </select>
+
+            <!-- Confidence indicator -->
+            <span class="text-xs shrink-0 font-medium w-14 text-center"
+              :class="item.confidence === 'high' ? 'text-green-600' : item.confidence === 'low' ? 'text-red-400' : 'text-amber-500'"
+              x-text="item.confidence">
+            </span>
+
+            <!-- Reason tooltip -->
+            <span class="text-xs text-slate-400 max-w-40 truncate hidden md:block shrink-0" :title="item.reason" x-text="item.reason"></span>
           </div>
         </template>
       </div>
-      <div class="flex gap-2 mt-3">
-        <sl-button size="small" @click="aiPreview = null">Dismiss</sl-button>
-        <sl-button size="small" variant="primary" :loading="applying" @click="applyAIPreview()">
-          <i data-lucide="check" class="w-3.5 h-3.5" slot="prefix"></i>
-          Apply All (<span x-text="aiPreview.length"></span>)
-        </sl-button>
+
+      <!-- Footer actions -->
+      <div class="flex items-center justify-between mt-3">
+        <p class="text-xs text-slate-400">You can change the intent for any row before applying.</p>
+        <div class="flex gap-2">
+          <sl-button size="small" @click="aiPreview = null">Dismiss</sl-button>
+          <sl-button size="small" variant="primary" :loading="applying" @click="applyAIPreview()">
+            <i data-lucide="check" class="w-3.5 h-3.5" slot="prefix"></i>
+            Apply <span x-text="aiPreview.length"></span> intents
+          </sl-button>
+        </div>
       </div>
     </div>
   </template>
@@ -247,12 +295,48 @@
                 <th class="w-10">
                   <input type="checkbox" @change="toggleSelectAll($event.target.checked)" class="rounded">
                 </th>
-                <th>Keyword</th>
-                <th>Intent</th>
-                <th class="hidden sm:table-cell">Status</th>
-                <th class="text-right hidden sm:table-cell">Volume</th>
-                <th class="text-right hidden md:table-cell">KD</th>
-                <th class="text-right hidden lg:table-cell">Position</th>
+                <th @click="sortBy('keyword')" class="cursor-pointer hover:bg-slate-50 select-none">
+                  <div class="flex items-center gap-1">
+                    Keyword
+                    <span x-show="sortCol === 'keyword' && sortAsc" class="text-slate-400"><i data-lucide="arrow-up" class="w-3 h-3"></i></span>
+                    <span x-show="sortCol === 'keyword' && !sortAsc" class="text-slate-400"><i data-lucide="arrow-down" class="w-3 h-3"></i></span>
+                  </div>
+                </th>
+                <th @click="sortBy('intent')" class="cursor-pointer hover:bg-slate-50 select-none">
+                  <div class="flex items-center gap-1">
+                    Intent
+                    <span x-show="sortCol === 'intent' && sortAsc" class="text-slate-400"><i data-lucide="arrow-up" class="w-3 h-3"></i></span>
+                    <span x-show="sortCol === 'intent' && !sortAsc" class="text-slate-400"><i data-lucide="arrow-down" class="w-3 h-3"></i></span>
+                  </div>
+                </th>
+                <th class="hidden sm:table-cell cursor-pointer hover:bg-slate-50 select-none" @click="sortBy('status')">
+                  <div class="flex items-center gap-1">
+                    Status
+                    <span x-show="sortCol === 'status' && sortAsc" class="text-slate-400"><i data-lucide="arrow-up" class="w-3 h-3"></i></span>
+                    <span x-show="sortCol === 'status' && !sortAsc" class="text-slate-400"><i data-lucide="arrow-down" class="w-3 h-3"></i></span>
+                  </div>
+                </th>
+                <th class="text-right hidden sm:table-cell cursor-pointer hover:bg-slate-50 select-none" @click="sortBy('search_volume')">
+                  <div class="flex items-center justify-end gap-1">
+                    Volume
+                    <span x-show="sortCol === 'search_volume' && sortAsc" class="text-slate-400"><i data-lucide="arrow-up" class="w-3 h-3"></i></span>
+                    <span x-show="sortCol === 'search_volume' && !sortAsc" class="text-slate-400"><i data-lucide="arrow-down" class="w-3 h-3"></i></span>
+                  </div>
+                </th>
+                <th class="text-right hidden md:table-cell cursor-pointer hover:bg-slate-50 select-none" @click="sortBy('difficulty')">
+                  <div class="flex items-center justify-end gap-1">
+                    KD
+                    <span x-show="sortCol === 'difficulty' && sortAsc" class="text-slate-400"><i data-lucide="arrow-up" class="w-3 h-3"></i></span>
+                    <span x-show="sortCol === 'difficulty' && !sortAsc" class="text-slate-400"><i data-lucide="arrow-down" class="w-3 h-3"></i></span>
+                  </div>
+                </th>
+                <th class="text-right hidden lg:table-cell cursor-pointer hover:bg-slate-50 select-none" @click="sortBy('current_position')">
+                  <div class="flex items-center justify-end gap-1">
+                    Position
+                    <span x-show="sortCol === 'current_position' && sortAsc" class="text-slate-400"><i data-lucide="arrow-up" class="w-3 h-3"></i></span>
+                    <span x-show="sortCol === 'current_position' && !sortAsc" class="text-slate-400"><i data-lucide="arrow-down" class="w-3 h-3"></i></span>
+                  </div>
+                </th>
                 <th class="w-24">Actions</th>
               </tr>
             </thead>
@@ -658,6 +742,7 @@ function keywordsPage() {
     loading: false,
     saving: false,
     classifying: false,
+    classifyingAll: false, // Classify all unclassified keywords
     applying: false,
     importing: false,
     mapping: false,
@@ -665,9 +750,11 @@ function keywordsPage() {
     importTab: 'file',         // 'file' | 'paste'
     importFileName: '',        // Tên file đã chọn
     importDragOver: false,     // Visual cue khi kéo file vào dropzone
-    // Filters & pagination
+    // Filters & pagination & sorting
     searchQuery: '',
     filters: { intent: '', status: '' },
+    sortCol: '',
+    sortAsc: true,
     page: 1,
     pageSize: 50,
     // Selection
@@ -702,9 +789,25 @@ function keywordsPage() {
       return [...new Set(this.keywords.map(k => k.cluster_group).filter(Boolean))];
     },
 
+    // ── Sorting ─────────────────────────────────────────────
+
+    sortBy(col) {
+      if (this.sortCol === col) {
+        this.sortAsc = !this.sortAsc;
+      } else {
+        this.sortCol = col;
+        this.sortAsc = true;
+      }
+      this.page = 1;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
     // ── Computed ──────────────────────────────────────────────
 
     get cannibalizationCount() { return this.cannibalization.length; },
+
+    // Số keywords chưa có intent
+    get unclassifiedCount() { return this.keywords.filter(k => !k.intent).length; },
 
     get filteredKeywords() {
       let rows = this.keywords;
@@ -718,6 +821,23 @@ function keywordsPage() {
       }
       if (this.filters.intent) rows = rows.filter(k => k.intent === this.filters.intent);
       if (this.filters.status) rows = rows.filter(k => k.status === this.filters.status);
+
+      if (this.sortCol) {
+        rows.sort((a, b) => {
+          let valA = a[this.sortCol];
+          let valB = b[this.sortCol];
+          if (['search_volume', 'difficulty', 'cpc', 'current_position'].includes(this.sortCol)) {
+            valA = valA === '' || valA === null || isNaN(valA) ? -1 : Number(valA);
+            valB = valB === '' || valB === null || isNaN(valB) ? -1 : Number(valB);
+            return this.sortAsc ? valA - valB : valB - valA;
+          } else {
+            valA = String(valA || '').toLowerCase();
+            valB = String(valB || '').toLowerCase();
+            return this.sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+          }
+        });
+      }
+
       return rows;
     },
 
@@ -1115,28 +1235,74 @@ function keywordsPage() {
 
     // ── AI Classify ───────────────────────────────────────────
 
+    /**
+     * Classify keywords đang được chọn (bulk action, tối đa 50)
+     */
     async classifySelected() {
       const selected = this.keywords.filter(k => this.selectedIds.includes(k.keyword_id));
       const kws = selected.map(k => k.keyword);
       if (kws.length === 0) return;
       if (kws.length > 50) {
-        this.$dispatch('show-toast', { message: 'Max 50 keywords per classification', type: 'warning' });
+        this.$dispatch('show-toast', { message: 'Max 50 keywords per classification. Deselect some.', type: 'warning' });
         return;
       }
       this.classifying = true;
       try {
         const results = await callServer('keyword.classify', { keywords: kws });
-        // Enrich với keyword_id để apply sau
-        this.aiPreview = results.map(p => ({
-          ...p,
-          keyword_id: this.keywords.find(k => k.keyword.toLowerCase() === p.keyword.toLowerCase())?.keyword_id
-        }));
+        this.aiPreview = this._enrichPreview(results);
         this.$nextTick(() => lucide.createIcons());
       } catch (e) {
         this.$dispatch('show-toast', { message: e.message, type: 'danger' });
       } finally {
         this.classifying = false;
       }
+    },
+
+    /**
+     * Classify TẤT CẢ keywords chưa có intent — auto-chunk 50/batch
+     * Gọi tuần tự từng chunk để tránh timeout GAS
+     */
+    async classifyUnclassified() {
+      const unclassified = this.keywords.filter(k => !k.intent);
+      if (unclassified.length === 0) {
+        this.$dispatch('show-toast', { message: 'All keywords already have intent', type: 'success' });
+        return;
+      }
+      this.classifyingAll = true;
+      this.aiPreview = null;
+      const allResults = [];
+      const chunkSize = 50;
+      const chunks = [];
+      for (let i = 0; i < unclassified.length; i += chunkSize) {
+        chunks.push(unclassified.slice(i, i + chunkSize));
+      }
+      try {
+        this.$dispatch('show-toast', {
+          message: `Classifying ${unclassified.length} keywords in ${chunks.length} batch(es)...`,
+          type: 'primary'
+        });
+        for (let ci = 0; ci < chunks.length; ci++) {
+          const kws = chunks[ci].map(k => k.keyword);
+          const results = await callServer('keyword.classify', { keywords: kws });
+          allResults.push(...results);
+        }
+        this.aiPreview = this._enrichPreview(allResults);
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        this.$dispatch('show-toast', { message: 'Classification failed: ' + e.message, type: 'danger' });
+      } finally {
+        this.classifyingAll = false;
+      }
+    },
+
+    /**
+     * Enrich AI results với keyword_id từ local keywords array
+     */
+    _enrichPreview(results) {
+      return results.map(p => ({
+        ...p,
+        keyword_id: this.keywords.find(k => k.keyword.toLowerCase() === p.keyword.toLowerCase())?.keyword_id
+      }));
     },
 
     async applyAIPreview() {

@@ -11,6 +11,15 @@
 
 ---
 
+## v0.4.1 — 2026-04-07
+
+### Added
+- [M2] Smart Data Table: Thêm tính năng Sort đa chiều (tăng dần/giảm dần) cho 6 cột dữ liệu, hỗ trợ phân loại logic chuỗi và số trên bảng Keywords.
+- [M2] Nâng cấp AI Classify Intent: Bổ sung Header Action phân loại hàng loạt các từ khoá chưa có intent với cơ chế auto-chunking (50 keywords/batch), tích hợp inline intent editor (dropdown select) ngay tại AI Preview Panel.
+- [M2] Hiển thị trạng thái phân bố chỉ số Confidence (High/Medium/Low) khi phân tích AI.
+
+---
+
 ## v0.4.0 — 2026-04-07
 
 ### Added

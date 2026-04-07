@@ -151,7 +151,8 @@ Phase 5 [WP Integration]  → ⬜ Chưa bắt đầu
 ## Changelog Nhanh
 
 | Date | Version | Ghi chú |
-|---|---|---|
+| 2026-04-07 | v0.4.1 | Nâng cấp AI Classify Intent (Auto-chunking) và Table Sorting (M2) |
+| 2026-04-07 | v0.4.0 | Hoàn thiện toàn bộ M2 (Keyword Research & Mapping) |
 | 2026-04-07 | v0.3.0 | Thêm màn hình quản lý Projects và tối ưu Responsive UI |
 | 2026-04-07 | v0.2.1 | Chuyển sang kiến trúc Google Drive Folder, sửa lỗi Seed data |
 | 2026-04-05 | v0.2.0 | Hoàn thiện GUI Shell, API Dispatcher & Config Setup |
