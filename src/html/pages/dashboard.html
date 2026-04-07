@@ -1,0 +1,118 @@
+<div x-show="currentPage === 'dashboard'" x-data="dashboardPage()" @project-changed.window="onProjectChange($event.detail.projectId)" class="ts-page">
+
+  <!-- Page Header -->
+  <div class="ts-page-header">
+    <div>
+      <h1 class="ts-page-title inline-flex items-center gap-2">
+        Dashboard
+        <template x-if="currentProject?.spreadsheet_id">
+          <sl-icon-button name="box-arrow-up-right" class="text-indigo-600 hover:text-indigo-800" 
+            title="Open Google Sheet" 
+            @click="window.open('https://docs.google.com/spreadsheets/d/' + currentProject.spreadsheet_id, '_blank')">
+          </sl-icon-button>
+        </template>
+      </h1>
+      <p class="ts-page-subtitle" x-text="currentProject ? `Project: ${currentProject.domain}` : ''"></p>
+    </div>
+    <div class="flex gap-2">
+      <sl-button size="small" variant="default" :loading="loading" @click="loadStats()">
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5" slot="prefix"></i>
+        Refresh
+      </sl-button>
+    </div>
+  </div>
+
+  <!-- KPI Stats Cards -->
+  <template x-if="!loading && stats">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+
+      <div class="ts-stat-card">
+        <div class="ts-stat-icon"><i data-lucide="mouse-pointer-click" class="w-5 h-5 text-indigo-500"></i></div>
+        <div class="ts-stat-value" x-text="fmtNumber(stats.gsc?.clicks)">-</div>
+        <div class="ts-stat-label">GSC Clicks</div>
+      </div>
+
+      <div class="ts-stat-card">
+        <div class="ts-stat-icon"><i data-lucide="key" class="w-5 h-5 text-blue-500"></i></div>
+        <div class="ts-stat-value" x-text="fmtNumber(stats.keywords?.total)">-</div>
+        <div class="ts-stat-label">Total Keywords</div>
+      </div>
+
+      <div class="ts-stat-card">
+        <div class="ts-stat-icon"><i data-lucide="network" class="w-5 h-5 text-emerald-500"></i></div>
+        <div class="ts-stat-value" x-text="fmtNumber(stats.silo?.total)">-</div>
+        <div class="ts-stat-label">Silo Pages</div>
+      </div>
+
+      <div class="ts-stat-card">
+        <div class="ts-stat-icon"><i data-lucide="clipboard-check" class="w-5 h-5 text-orange-500"></i></div>
+        <div class="ts-stat-value" x-text="stats.audit ? stats.audit.completion + '%' : '-'">-</div>
+        <div class="ts-stat-label">Audit Complete</div>
+      </div>
+
+    </div>
+  </template>
+
+  <!-- Loading skeleton -->
+  <template x-if="loading">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <template x-for="_ in [1,2,3,4]">
+        <div class="ts-stat-card animate-pulse">
+          <div class="h-8 w-8 sm:h-9 sm:w-9 bg-slate-200 rounded-lg"></div>
+          <div class="h-6 sm:h-8 bg-slate-200 rounded w-20 sm:w-24"></div>
+          <div class="h-3 bg-slate-200 rounded w-16 sm:w-20"></div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Quick Actions -->
+  <div class="ts-card">
+    <h2 class="text-sm font-semibold text-slate-700 mb-3">Quick Actions</h2>
+    <div class="flex gap-2 sm:gap-3 flex-wrap">
+      <sl-button size="small" @click="$dispatch('navigate', 'keywords')">
+        <i data-lucide="plus" class="w-3.5 h-3.5" slot="prefix"></i>
+        Add Keywords
+      </sl-button>
+      <sl-button size="small" @click="$dispatch('navigate', 'audit')">
+        <i data-lucide="clipboard-check" class="w-3.5 h-3.5" slot="prefix"></i>
+        Run Audit
+      </sl-button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function dashboardPage() {
+  return {
+    loading: false,
+    stats: null,
+    get currentProject() { return Alpine.store ? null : window._currentProject; },
+
+    async init() {
+      if (this.$el.closest('[x-data]').__x?.$data?.currentProjectId) {
+        await this.loadStats();
+      }
+    },
+
+    async onProjectChange(projectId) {
+      await this.loadStats(projectId);
+    },
+
+    async loadStats(projectId) {
+      const pid = projectId || document.querySelector('[x-data="appShell()"]')?.__x?.$data?.currentProjectId;
+      if (!pid) return;
+      this.loading = true;
+      try {
+        this.stats = await callServer('dashboard.getStats', { projectId: pid });
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        this.$dispatch('show-toast', { message: e.message, type: 'danger' });
+      } finally {
+        this.loading = false;
+      }
+    }
+  };
+}
+</script>

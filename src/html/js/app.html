@@ -1,0 +1,163 @@
+<script>
+/**
+ * app.html — Alpine.js global app state & router
+ * Mount vào <body x-data="appShell()">
+ */
+
+function appShell() {
+  return {
+    // ── State ─────────────────────────────────────────────────
+    currentPage: 'projects',
+    currentProjectId: null,
+    currentProject: null,
+    projects: [],
+    syncing: false,
+    showNewProjectModal: false,
+    creatingProject: false,
+    newProject: { name: '', client_name: '', domain: '', gsc_site_url: '' },
+    sidebarOpen: false,
+
+    // ── Navigation items ──────────────────────────────────────
+    navItems: [
+      { id: 'projects',   label: 'Projects',       icon: 'folder',           requiresProject: false },
+      { id: 'dashboard',  label: 'Dashboard',     icon: 'layout-dashboard', requiresProject: true  },
+      { id: 'keywords',   label: 'Keywords',       icon: 'key',              requiresProject: true  },
+      { id: 'silo',       label: 'Silo Structure', icon: 'network',          requiresProject: true  },
+      { id: 'outlines',   label: 'Outlines',       icon: 'file-text',        requiresProject: true  },
+      { id: 'audit',      label: 'Tech Audit',     icon: 'clipboard-check',  requiresProject: true  },
+      { id: 'settings',   label: 'Settings',       icon: 'settings',         requiresProject: false },
+    ],
+
+    // ── Lifecycle ─────────────────────────────────────────────
+    async init() {
+      await this.loadProjects();
+      // Khôi phục project đã chọn từ sessionStorage
+      const saved = sessionStorage.getItem('currentProjectId');
+      if (saved && this.projects.find(p => p.project_id === saved)) {
+        this.switchProject(saved);
+      }
+      // Init Lucide icons sau khi DOM sẵn sàng
+      this.$nextTick(() => lucide.createIcons());
+
+      // Lắng nghe toast events từ các pages
+      this.$el.addEventListener('show-toast', e => {
+        this.$dispatch('toast', e.detail);
+      });
+
+      // Lắng nghe sự kiện mở modal popup của Shoelace để render lại icons bên trong
+      window.addEventListener('sl-show', () => {
+        setTimeout(() => lucide.createIcons(), 50);
+      });
+
+      // Đóng sidebar khi resize lên desktop
+      window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) this.sidebarOpen = false;
+      });
+    },
+
+    // ── Sidebar ──────────────────────────────────────────────
+    toggleSidebar() {
+      this.sidebarOpen = !this.sidebarOpen;
+    },
+
+    get isMobile() {
+      return window.innerWidth < 1024;
+    },
+
+    // ── Actions ───────────────────────────────────────────────
+    async loadProjects() {
+      try {
+        this.projects = await callServer('project.getAll') || [];
+      } catch (e) {
+        this.showToast(e.message, 'danger');
+      }
+    },
+
+    switchProject(projectId) {
+      this.currentProjectId = projectId;
+      this.currentProject = this.projects.find(p => p.project_id === projectId) || null;
+      sessionStorage.setItem('currentProjectId', projectId);
+      // Notify tất cả page components về project change
+      this.$el.dispatchEvent(new CustomEvent('project-changed', { detail: { projectId }, bubbles: true }));
+    },
+
+    navigate(pageId) {
+      this.currentPage = pageId;
+      // Auto-close sidebar trên mobile khi navigate
+      if (window.innerWidth < 1024) {
+        this.sidebarOpen = false;
+      }
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openNewProjectModal() {
+      this.newProject = { name: '', client_name: '', domain: '', gsc_site_url: '' };
+      this.showNewProjectModal = true;
+    },
+
+    async createProject() {
+      if (!this.newProject.name || !this.newProject.domain) {
+        this.showToast('Project name and domain are required', 'warning');
+        return;
+      }
+      this.creatingProject = true;
+      try {
+        const project = await callServer('project.create', { data: this.newProject });
+        this.projects.push(project);
+        this.showNewProjectModal = false;
+        this.switchProject(project.project_id);
+        this.navigate('dashboard');
+        this.showToast(`Project "${project.name}" created`, 'success');
+      } catch (e) {
+        this.showToast(e.message, 'danger');
+      } finally {
+        this.creatingProject = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async syncGSC() {
+      if (!this.currentProjectId) return;
+      this.syncing = true;
+      try {
+        const result = await callServer('gsc.syncPerformance', { projectId: this.currentProjectId });
+        this.showToast(`Synced ${result.synced} rows from GSC`, 'success');
+      } catch (e) {
+        this.showToast(e.message, 'danger');
+      } finally {
+        this.syncing = false;
+      }
+    },
+
+    showToast(message, type = 'neutral') {
+      this.$el.dispatchEvent(new CustomEvent('toast', { detail: { message, type }, bubbles: true }));
+    }
+  };
+}
+
+/**
+ * Toast Manager — mount vào #toast-container
+ */
+function toastManager() {
+  return {
+    toasts: [],
+    _counter: 0,
+    init() {
+      this.$el.closest('body').addEventListener('toast', e => this.add(e.detail));
+      this.$el.closest('body').addEventListener('show-toast', e => this.add(e.detail));
+    },
+    add({ message, type = 'neutral' }) {
+      const iconMap = { success: 'check-circle', danger: 'x-circle', warning: 'alert-triangle', neutral: 'info' };
+      const ttlMap  = { success: 3000, danger: 5000, warning: 4000, neutral: 3000 };
+      const id = ++this._counter;
+      this.toasts.push({ id, message, type, icon: iconMap[type] || 'info', visible: true });
+      this.$nextTick(() => lucide.createIcons());
+      setTimeout(() => this.dismiss(id), ttlMap[type] || 3000);
+    },
+    dismiss(id) {
+      const toast = this.toasts.find(t => t.id === id);
+      if (toast) { toast.visible = false; setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 200); }
+    }
+  };
+}
+</script>

@@ -1,0 +1,48 @@
+{
+  "items": [
+    { "id": "T01", "category": "Crawlability", "severity": "critical", "title": "robots.txt accessible and correctly configured", "description": "Verify robots.txt is reachable and does not block important pages" },
+    { "id": "T02", "category": "Crawlability", "severity": "critical", "title": "XML Sitemap submitted and indexed", "description": "Check sitemap.xml exists, is valid, and submitted to GSC" },
+    { "id": "T03", "category": "Crawlability", "severity": "high", "title": "No broken internal links (4xx/5xx)", "description": "Crawl site for broken links using Screaming Frog or Ahrefs" },
+    { "id": "T04", "category": "Crawlability", "severity": "high", "title": "Crawl budget not wasted on low-value pages", "description": "Check pagination, filters, tags pages are handled with noindex/disallow" },
+    { "id": "T05", "category": "Crawlability", "severity": "medium", "title": "Canonical tags consistent and correct", "description": "Self-referencing canonicals on all key pages; no cross-domain canonical issues" },
+
+    { "id": "T06", "category": "Indexation", "severity": "critical", "title": "Core pages indexed in Google", "description": "Use site: operator and GSC Index Coverage to verify" },
+    { "id": "T07", "category": "Indexation", "severity": "critical", "title": "No thin or duplicate content pages indexed", "description": "Identify and noindex or consolidate thin pages" },
+    { "id": "T08", "category": "Indexation", "severity": "high", "title": "Hreflang tags correct (if multilingual)", "description": "Check hreflang syntax, return links, x-default" },
+    { "id": "T09", "category": "Indexation", "severity": "medium", "title": "Pagination handled correctly (rel=next/prev deprecated — use canonical)", "description": "Ensure paginated pages have appropriate canonical or noindex" },
+    { "id": "T10", "category": "Indexation", "severity": "medium", "title": "404 pages return 404 status code", "description": "Soft 404s must be fixed" },
+
+    { "id": "T11", "category": "On-Page", "severity": "critical", "title": "Each page has unique, keyword-optimized title tag", "description": "50-60 chars, primary keyword near start" },
+    { "id": "T12", "category": "On-Page", "severity": "critical", "title": "Meta descriptions present and optimized", "description": "120-160 chars, compelling CTA, includes target keyword" },
+    { "id": "T13", "category": "On-Page", "severity": "critical", "title": "H1 tag present, unique per page", "description": "One H1 per page, contains primary keyword, matches intent" },
+    { "id": "T14", "category": "On-Page", "severity": "high", "title": "Header hierarchy logical (H1→H2→H3)", "description": "No skipped heading levels" },
+    { "id": "T15", "category": "On-Page", "severity": "high", "title": "Image alt text descriptive and keyword-relevant", "description": "No empty alt on content images; decorative images have empty alt" },
+    { "id": "T16", "category": "On-Page", "severity": "high", "title": "Internal linking strategy implemented", "description": "Key pages receive adequate internal links; anchor text varied and descriptive" },
+    { "id": "T17", "category": "On-Page", "severity": "medium", "title": "URL structure clean and keyword-rich", "description": "Short, lowercase, hyphens, no parameters on key pages" },
+    { "id": "T18", "category": "On-Page", "severity": "medium", "title": "Content covers topic comprehensively", "description": "Word count appropriate to SERP; covers related subtopics; updated" },
+
+    { "id": "T19", "category": "Technical", "severity": "critical", "title": "HTTPS enforced on all pages", "description": "No mixed content; HTTP→HTTPS 301 redirects in place" },
+    { "id": "T20", "category": "Technical", "severity": "critical", "title": "Mobile-friendly / responsive design", "description": "Passes Google Mobile-Friendly Test" },
+    { "id": "T21", "category": "Technical", "severity": "high", "title": "Core Web Vitals passing (LCP, CLS, INP)", "description": "Check PageSpeed Insights; LCP<2.5s, CLS<0.1, INP<200ms" },
+    { "id": "T22", "category": "Technical", "severity": "high", "title": "Page speed > 70 mobile (PSI)", "description": "Optimize images, minify JS/CSS, defer render-blocking resources" },
+    { "id": "T23", "category": "Technical", "severity": "high", "title": "No redirect chains (max 1 hop)", "description": "Check all redirects are direct 301s" },
+    { "id": "T24", "category": "Technical", "severity": "medium", "title": "Structured data / schema markup implemented", "description": "Article, FAQ, BreadcrumbList, Organization at minimum; valid in Rich Results Test" },
+    { "id": "T25", "category": "Technical", "severity": "medium", "title": "Open Graph and Twitter Card tags present", "description": "All shareable pages have og:title, og:description, og:image" },
+    { "id": "T26", "category": "Technical", "severity": "medium", "title": "Browser caching enabled", "description": "Static assets served with appropriate Cache-Control headers" },
+    { "id": "T27", "category": "Technical", "severity": "low", "title": "Favicon present", "description": "Favicon served at /favicon.ico and linked in <head>" },
+
+    { "id": "T28", "category": "Content Quality", "severity": "critical", "title": "No plagiarized or AI-spun content", "description": "Check with Originality.AI or Copyscape for duplicate content" },
+    { "id": "T29", "category": "Content Quality", "severity": "high", "title": "E-E-A-T signals present", "description": "Author bio, credentials, citations, 'About' page, contact info visible" },
+    { "id": "T30", "category": "Content Quality", "severity": "high", "title": "Content updated regularly on key pages", "description": "Check 'Last Updated' dates; refresh content older than 12 months" },
+    { "id": "T31", "category": "Content Quality", "severity": "medium", "title": "No keyword stuffing", "description": "Keyword density < 3%; content reads naturally" },
+
+    { "id": "T32", "category": "Off-Page", "severity": "high", "title": "Backlink profile healthy (no toxic links)", "description": "Check Ahrefs/SEMrush for spammy anchors; disavow if needed" },
+    { "id": "T33", "category": "Off-Page", "severity": "medium", "title": "NAP consistent in local citations (if local SEO)", "description": "Name, Address, Phone identical across Google Business, directories" },
+    { "id": "T34", "category": "Off-Page", "severity": "medium", "title": "Google Business Profile verified and optimized (if local)", "description": "Complete profile, photos, posts, reviews responded to" },
+
+    { "id": "T35", "category": "AI Readiness", "severity": "high", "title": "FAQ sections present on key pages", "description": "Direct-answer format questions; Schema FAQ markup added" },
+    { "id": "T36", "category": "AI Readiness", "severity": "high", "title": "Content uses definition lists and structured answers", "description": "Paragraphs start with conclusion; definitions clear" },
+    { "id": "T37", "category": "AI Readiness", "severity": "medium", "title": "llms.txt or AI crawler access configured", "description": "Check if LLMs (GPTBot, ClaudeBot) can access content via robots.txt" },
+    { "id": "T38", "category": "AI Readiness", "severity": "medium", "title": "Brand mentioned in authoritative sources", "description": "Brand cited on Wikipedia, news sites, or industry publications" }
+  ]
+}

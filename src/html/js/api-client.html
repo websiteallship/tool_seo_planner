@@ -1,0 +1,29 @@
+<script>
+/**
+ * api-client.html — Wrapper Promise cho google.script.run
+ * Tất cả calls từ frontend đều đi qua callServer()
+ */
+
+/**
+ * Gọi server-side dispatch(action, params)
+ * @param {string} action
+ * @param {Object} params
+ * @returns {Promise<*>}
+ */
+function callServer(action, params = {}) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(result => {
+        if (result && result.success) {
+          resolve(result.data);
+        } else {
+          reject(new Error(result?.error || 'Unknown server error'));
+        }
+      })
+      .withFailureHandler(err => {
+        reject(new Error(err?.message || 'Connection failed'));
+      })
+      .dispatch(action, params);
+  });
+}
+</script>

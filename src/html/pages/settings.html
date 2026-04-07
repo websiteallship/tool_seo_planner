@@ -1,0 +1,165 @@
+<div x-show="currentPage === 'settings'" x-data="settingsPage()" class="ts-page">
+
+  <div class="ts-page-header">
+    <div>
+      <h1 class="ts-page-title">Settings</h1>
+      <p class="ts-page-subtitle">Configure API keys and system setup</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+
+    <!-- API Configuration -->
+    <div class="ts-card space-y-4">
+      <h2 class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+        <i data-lucide="key" class="w-4 h-4 text-indigo-500"></i>
+        API Configuration
+      </h2>
+      <sl-input id="setting-drive-folder-id" label="Google Drive Folder ID" placeholder="Paste Google Drive Folder ID..." x-model="config.drive_folder_id" type="password" password-toggle :help-text="configStatus.drive_folder_id ? 'Configured' : 'Not configured'"></sl-input>
+      <sl-input id="setting-gemini-api-key" label="Gemini API Key" placeholder="AIza..." x-model="config.gemini_api_key" type="password" password-toggle :help-text="configStatus.gemini_api_key ? 'Configured' : 'Not configured'"></sl-input>
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3 pt-2">
+        <sl-button variant="primary" :loading="saving" @click="saveConfig()">
+          <i data-lucide="save" class="w-4 h-4" slot="prefix"></i> Save Configuration
+        </sl-button>
+        <sl-button variant="default" :loading="testing" @click="testConnection()">
+          <i data-lucide="activity" class="w-4 h-4" slot="prefix"></i> Test Connection
+        </sl-button>
+      </div>
+    </div>
+
+    <!-- System Setup -->
+    <div class="ts-card space-y-4">
+      <h2 class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+        <i data-lucide="settings-2" class="w-4 h-4 text-indigo-500"></i> System Setup
+      </h2>
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-sm py-2 border-b border-slate-100">
+          <span class="text-slate-600">Drive Folder</span>
+          <span :class="configStatus.drive_folder_id ? 'text-green-600' : 'text-red-500'" class="flex items-center gap-1">
+            <i :data-lucide="configStatus.drive_folder_id ? 'check-circle' : 'x-circle'" class="w-4 h-4"></i>
+            <span x-text="configStatus.drive_folder_id ? 'Connected' : 'Not configured'"></span>
+          </span>
+        </div>
+        <div class="flex items-center justify-between text-sm py-2 border-b border-slate-100">
+          <span class="text-slate-600">Gemini AI</span>
+          <span :class="configStatus.gemini_api_key ? 'text-green-600' : 'text-red-500'" class="flex items-center gap-1">
+            <i :data-lucide="configStatus.gemini_api_key ? 'check-circle' : 'x-circle'" class="w-4 h-4"></i>
+            <span x-text="configStatus.gemini_api_key ? 'Configured' : 'Not configured'"></span>
+          </span>
+        </div>
+        <div class="flex items-center justify-between text-sm py-2">
+          <span class="text-slate-600">GSC OAuth</span>
+          <span class="text-green-600 flex items-center gap-1">
+            <i data-lucide="check-circle" class="w-4 h-4"></i> Auto (Script OAuth)
+          </span>
+        </div>
+      </div>
+      <sl-button variant="default" :loading="initingTriggers" @click="initTriggers()">
+        <i data-lucide="clock" class="w-4 h-4" slot="prefix"></i> Initialize Scheduled Triggers
+      </sl-button>
+    </div>
+  </div>
+
+  <!-- GSC Properties -->
+  <div class="ts-card mt-4 sm:mt-6">
+    <h2 class="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-4">
+      <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-500"></i> GSC Properties
+    </h2>
+    <sl-button size="small" variant="default" :loading="loadingGSC" @click="loadGSCProperties()">
+      <i data-lucide="refresh-cw" class="w-3.5 h-3.5" slot="prefix"></i> Load GSC Properties
+    </sl-button>
+    <template x-if="gscProperties.length > 0">
+      <div class="mt-3 space-y-1">
+        <template x-for="prop in gscProperties" :key="prop">
+          <div class="flex items-center gap-2 text-sm py-1.5 border-b border-slate-50">
+            <i data-lucide="globe" class="w-4 h-4 text-slate-400 shrink-0"></i>
+            <span x-text="prop" class="truncate"></span>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <!-- Developer Tools -->
+  <div class="ts-card mt-4 sm:mt-6 border-l-4 border-l-amber-500" x-show="currentProjectId">
+    <h2 class="text-sm font-semibold text-amber-700 flex items-center gap-2 mb-4">
+      <i data-lucide="terminal" class="w-4 h-4"></i> Developer Tools
+    </h2>
+    <p class="text-sm text-slate-500 mb-4">Warning: Triggers destructive automated seed into the currently selected project.</p>
+    <sl-button size="small" variant="warning" :loading="seeding" @click="seedData()">
+      <i data-lucide="database" class="w-3.5 h-3.5" slot="prefix"></i> Seed Mock Data (Current Project)
+    </sl-button>
+  </div>
+
+</div>
+
+<script>
+function settingsPage() {
+  return {
+    config: { drive_folder_id: '', gemini_api_key: '' },
+    configStatus: { drive_folder_id: false, gemini_api_key: false },
+    saving: false, testing: false, seeding: false, initingTriggers: false, loadingGSC: false,
+    gscProperties: [],
+
+    async init() { await this.loadConfig(); this.$nextTick(() => lucide.createIcons()); },
+
+    async loadConfig() {
+      try {
+        const r = await callServer('setup.getConfig');
+        this.configStatus = { drive_folder_id: !!r.drive_folder_id, gemini_api_key: !!r.gemini_api_key, gsc_configured: r.gsc_configured };
+        this.config = { drive_folder_id: r.drive_folder_id || '', gemini_api_key: r.gemini_api_key || '' };
+      } catch (e) { /* chưa set */ }
+    },
+
+    async saveConfig() {
+      const data = {};
+      if (this.config.drive_folder_id) data.drive_folder_id = this.config.drive_folder_id;
+      if (this.config.gemini_api_key) data.gemini_api_key = this.config.gemini_api_key;
+      this.saving = true;
+      try {
+        const r = await callServer('setup.saveConfig', { data });
+        this.configStatus = { drive_folder_id: !!r.drive_folder_id, gemini_api_key: !!r.gemini_api_key, gsc_configured: r.gsc_configured };
+        this.$dispatch('show-toast', { message: 'Saved!', type: 'success' });
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) { this.$dispatch('show-toast', { message: e.message, type: 'danger' }); }
+      finally { this.saving = false; }
+    },
+
+    async testConnection() {
+      if (!this.config.drive_folder_id) { this.$dispatch('show-toast', { message: 'Enter Drive Folder ID first', type: 'warning' }); return; }
+      this.testing = true;
+      try { const r = await callServer('setup.testMasterSheetConnection', { spreadsheetId: this.config.drive_folder_id }); this.$dispatch('show-toast', { message: `Connected: ${r.name}`, type: 'success' }); }
+      catch (e) { this.$dispatch('show-toast', { message: e.message, type: 'danger' }); }
+      finally { this.testing = false; }
+    },
+
+    async initTriggers() {
+      this.initingTriggers = true;
+      try { await callServer('setup.initTriggers'); this.$dispatch('show-toast', { message: '4 triggers initialized', type: 'success' }); }
+      catch (e) { this.$dispatch('show-toast', { message: e.message, type: 'danger' }); }
+      finally { this.initingTriggers = false; }
+    },
+
+    async loadGSCProperties() {
+      this.loadingGSC = true;
+      try { this.gscProperties = await callServer('gsc.listProperties') || []; if (!this.gscProperties.length) this.$dispatch('show-toast', { message: 'No GSC properties found', type: 'warning' }); this.$nextTick(() => lucide.createIcons()); }
+      catch (e) { this.$dispatch('show-toast', { message: e.message, type: 'danger' }); }
+      finally { this.loadingGSC = false; }
+    },
+
+    async seedData() {
+      const projectId = this.currentProjectId;
+      if (!projectId) { this.$dispatch('show-toast', { message: 'Select a project first', type: 'warning' }); return; }
+      if (!confirm('Data will be overwritten. Continue?')) return;
+      this.seeding = true;
+      try {
+        const r = await callServer('seed.run', { projectId });
+        const ok = r?.results ? Object.keys(r.results).length : 0;
+        const fail = r?.errors ? Object.keys(r.errors).length : 0;
+        this.$dispatch('show-toast', { message: fail > 0 ? `Seed ${ok} OK, ${fail} failed` : `Seed ${ok} tabs OK`, type: fail > 0 ? 'warning' : 'success' });
+      } catch (e) { this.$dispatch('show-toast', { message: `Seed failed: ${e.message}`, type: 'danger' }); }
+      finally { this.seeding = false; }
+    }
+  };
+}
+</script>

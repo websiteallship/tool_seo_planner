@@ -1,0 +1,199 @@
+<div x-show="currentPage === 'audit'" x-data="auditPage()" @project-changed.window="onProjectChange($event.detail.projectId)" class="ts-page">
+
+  <div class="ts-page-header">
+    <div>
+      <h1 class="ts-page-title">Technical Audit</h1>
+      <p class="ts-page-subtitle" x-text="stats ? `${stats.completion}% complete · ${stats.total} items` : ''"></p>
+    </div>
+    <div class="flex gap-2">
+      <sl-button size="small" variant="default" @click="resetAudit()">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5" slot="prefix"></i>
+        Re-audit
+      </sl-button>
+    </div>
+  </div>
+
+  <!-- Progress overview -->
+  <template x-if="stats">
+    <div class="ts-card mb-4">
+      <div class="flex items-center gap-4 sm:gap-6 mb-3">
+        <div class="text-xl sm:text-2xl font-bold text-slate-800" x-text="`${stats.completion}%`"></div>
+        <div class="flex-1">
+          <sl-progress-bar :value="stats.completion" style="--height: 8px;"></sl-progress-bar>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-3 sm:gap-4 text-sm">
+        <span class="flex items-center gap-1 text-green-600"><i data-lucide="check-circle" class="w-4 h-4"></i> <span x-text="stats.passed"></span> Pass</span>
+        <span class="flex items-center gap-1 text-red-600"><i data-lucide="x-circle" class="w-4 h-4"></i> <span x-text="stats.failed"></span> Fail</span>
+        <span class="flex items-center gap-1 text-yellow-600"><i data-lucide="clock" class="w-4 h-4"></i> <span x-text="stats.pending"></span> Pending</span>
+        <span class="flex items-center gap-1 text-slate-400"><i data-lucide="minus" class="w-4 h-4"></i> <span x-text="stats.na"></span> N/A</span>
+      </div>
+    </div>
+  </template>
+
+  <!-- Filter bar -->
+  <div class="ts-filter-bar">
+    <sl-select id="audit-category-filter" size="small" placeholder="All Categories" x-model="filters.category" class="w-full sm:w-44">
+      <sl-option value="">All Categories</sl-option>
+      <template x-for="c in categories" :key="c">
+        <sl-option :value="c" x-text="c"></sl-option>
+      </template>
+    </sl-select>
+    <sl-select id="audit-severity-filter" size="small" placeholder="All Severity" x-model="filters.severity" class="w-[calc(50%-0.25rem)] sm:w-36">
+      <sl-option value="">All Severity</sl-option>
+      <sl-option value="critical">Critical</sl-option>
+      <sl-option value="high">High</sl-option>
+      <sl-option value="medium">Medium</sl-option>
+      <sl-option value="low">Low</sl-option>
+    </sl-select>
+    <sl-select id="audit-status-filter" size="small" placeholder="All Status" x-model="filters.status" class="w-[calc(50%-0.25rem)] sm:w-36">
+      <sl-option value="">All Status</sl-option>
+      <sl-option value="pending">Pending</sl-option>
+      <sl-option value="pass">Pass</sl-option>
+      <sl-option value="fail">Fail</sl-option>
+      <sl-option value="na">N/A</sl-option>
+    </sl-select>
+  </div>
+
+  <!-- Checklist Table -->
+  <div class="ts-table-container">
+    <template x-if="loading">
+      <div class="p-8 text-center text-slate-400">
+        <sl-spinner style="font-size: 2rem;"></sl-spinner>
+      </div>
+    </template>
+
+    <template x-if="!loading">
+      <div class="ts-table-scroll">
+        <table class="ts-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="w-24">Severity</th>
+              <th class="w-28">Status</th>
+              <th class="w-28 hidden md:table-cell">Assignee</th>
+              <th class="w-28 hidden lg:table-cell">Due Date</th>
+              <th class="w-20 hidden lg:table-cell">Evidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="item in filteredItems" :key="item.item_id">
+              <tr>
+                <td>
+                  <div class="font-medium text-sm" x-text="item.title"></div>
+                  <div class="text-xs text-slate-400 mt-0.5" x-text="item.category"></div>
+                </td>
+                <td>
+                  <span class="ts-badge-status" :class="`ts-badge-${item.severity}`" x-text="item.severity"></span>
+                </td>
+                <td>
+                  <sl-select size="small" :value="item.status"
+                    @sl-change="updateItemStatus(item, $event.target.value)">
+                    <sl-option value="pending">Pending</sl-option>
+                    <sl-option value="pass">Pass</sl-option>
+                    <sl-option value="fail">Fail</sl-option>
+                    <sl-option value="na">N/A</sl-option>
+                  </sl-select>
+                </td>
+                <td class="hidden md:table-cell">
+                  <sl-input size="small" :value="item.assignee" placeholder="Name"
+                    @sl-blur="updateItemField(item, 'assignee', $event.target.value)"></sl-input>
+                </td>
+                <td class="hidden lg:table-cell">
+                  <sl-input size="small" type="date" :value="item.due_date"
+                    @sl-change="updateItemField(item, 'due_date', $event.target.value)"></sl-input>
+                </td>
+                <td class="hidden lg:table-cell">
+                  <sl-input size="small" :value="item.evidence_url" placeholder="URL"
+                    @sl-blur="updateItemField(item, 'evidence_url', $event.target.value)"></sl-input>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </template>
+  </div>
+
+</div>
+
+<script>
+function auditPage() {
+  return {
+    items: [],
+    stats: null,
+    loading: false,
+    filters: { category: '', severity: '', status: '' },
+
+    get categories() { return [...new Set(this.items.map(i => i.category).filter(Boolean))].sort(); },
+    get filteredItems() {
+      return this.items.filter(i => {
+        if (this.filters.category && i.category !== this.filters.category) return false;
+        if (this.filters.severity && i.severity !== this.filters.severity) return false;
+        if (this.filters.status && i.status !== this.filters.status) return false;
+        return true;
+      });
+    },
+
+    async onProjectChange(pid) {
+      this.items = [];
+      this.stats = null;
+      await this.loadChecklist(pid);
+    },
+
+    _getProjectId() {
+      let el = this.$el;
+      while (el) { if (el.__x?.$data?.currentProjectId) return el.__x.$data.currentProjectId; el = el.parentElement; }
+      return null;
+    },
+
+    async loadChecklist(projectId) {
+      const pid = projectId || this._getProjectId();
+      if (!pid) return;
+      this.loading = true;
+      try {
+        [this.items, this.stats] = await Promise.all([
+          callServer('audit.getChecklist', { projectId: pid }),
+          callServer('audit.getStats', { projectId: pid })
+        ]);
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        this.$dispatch('show-toast', { message: e.message, type: 'danger' });
+      } finally { this.loading = false; }
+    },
+
+    async updateItemStatus(item, status) {
+      const pid = this._getProjectId();
+      item.status = status;
+      try {
+        await callServer('audit.updateItem', { projectId: pid, itemId: item.item_id, data: { status } });
+        this.stats = await callServer('audit.getStats', { projectId: pid });
+      } catch (e) {
+        this.$dispatch('show-toast', { message: e.message, type: 'danger' });
+      }
+    },
+
+    async updateItemField(item, field, value) {
+      const pid = this._getProjectId();
+      item[field] = value;
+      try {
+        await callServer('audit.updateItem', { projectId: pid, itemId: item.item_id, data: { [field]: value } });
+      } catch (e) {
+        this.$dispatch('show-toast', { message: e.message, type: 'danger' });
+      }
+    },
+
+    async resetAudit() {
+      if (!confirm('Reset all audit items to pending?')) return;
+      const pid = this._getProjectId();
+      try {
+        await callServer('audit.reset', { projectId: pid });
+        await this.loadChecklist(pid);
+        this.$dispatch('show-toast', { message: 'Audit checklist reset', type: 'success' });
+      } catch (e) {
+        this.$dispatch('show-toast', { message: e.message, type: 'danger' });
+      }
+    }
+  };
+}
+</script>

@@ -1,0 +1,423 @@
+<div x-show="currentPage === 'keywords'" x-data="keywordsPage()" @project-changed.window="onProjectChange($event.detail.projectId)">
+<div class="ts-page">
+
+  <!-- Page Header -->
+  <div class="ts-page-header">
+    <div>
+      <h1 class="ts-page-title">Keywords</h1>
+      <p class="ts-page-subtitle" x-text="`${filteredKeywords.length} keywords`"></p>
+    </div>
+    <div class="flex gap-2">
+      <sl-button size="small" variant="default" @click="openImportModal()">
+        <i data-lucide="upload" class="w-3.5 h-3.5" slot="prefix"></i>
+        <span class="hidden sm:inline">Import CSV</span>
+      </sl-button>
+      <sl-button size="small" variant="primary" @click="openAddModal()">
+        <i data-lucide="plus" class="w-3.5 h-3.5" slot="prefix"></i>
+        <span class="hidden sm:inline">Add Keyword</span>
+      </sl-button>
+    </div>
+  </div>
+
+  <!-- Filters & Search -->
+  <div class="ts-filter-bar">
+    <sl-input
+      id="keyword-search"
+      size="small"
+      placeholder="Search keywords..."
+      x-model="searchQuery"
+      class="w-full sm:w-64"
+    >
+      <i data-lucide="search" class="w-4 h-4" slot="prefix"></i>
+    </sl-input>
+
+    <sl-select id="intent-filter" size="small" placeholder="All Intents" x-model="filters.intent" class="w-[calc(50%-0.25rem)] sm:w-40">
+      <sl-option value="">All Intents</sl-option>
+      <sl-option value="informational">Informational</sl-option>
+      <sl-option value="commercial">Commercial</sl-option>
+      <sl-option value="transactional">Transactional</sl-option>
+      <sl-option value="navigational">Navigational</sl-option>
+    </sl-select>
+
+    <sl-select id="cluster-filter" size="small" placeholder="All Clusters" x-model="filters.cluster" class="w-[calc(50%-0.25rem)] sm:w-40">
+      <sl-option value="">All Clusters</sl-option>
+      <template x-for="c in clusters" :key="c">
+        <sl-option :value="c" x-text="c"></sl-option>
+      </template>
+    </sl-select>
+
+    <!-- AI Classify button (hiện khi có selection) -->
+    <template x-if="selectedIds.length > 0">
+      <sl-button size="small" variant="default" :loading="classifying" @click="classifySelected()">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5" slot="prefix"></i>
+        Classify (<span x-text="selectedIds.length"></span>)
+      </sl-button>
+    </template>
+  </div>
+
+  <!-- AI Preview Panel -->
+  <template x-if="aiPreview">
+    <div class="ts-ai-preview-panel mb-4">
+      <div class="ts-ai-badge">
+        <i data-lucide="sparkles" class="w-4 h-4"></i>
+        AI Suggestions — Review before applying
+      </div>
+      <div class="text-sm text-slate-600 mb-3">
+        <span x-text="aiPreview.length"></span> intent classifications ready to apply.
+      </div>
+      <div class="flex gap-2">
+        <sl-button size="small" @click="aiPreview = null">Dismiss</sl-button>
+        <sl-button size="small" variant="primary" :loading="applying" @click="applyAIPreview()">Apply All</sl-button>
+      </div>
+    </div>
+  </template>
+
+  <!-- Table -->
+  <div class="ts-table-container">
+    <div class="ts-table-scroll">
+      <table class="ts-table">
+        <thead>
+          <tr>
+            <th class="w-10">
+              <input type="checkbox" @change="toggleSelectAll($event.target.checked)" class="rounded">
+            </th>
+            <th>Keyword</th>
+            <th>Intent</th>
+            <th class="hidden sm:table-cell">Cluster</th>
+            <th class="text-right hidden sm:table-cell">Volume</th>
+            <th class="text-right hidden md:table-cell">Position</th>
+            <th class="w-20">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- Loading skeleton -->
+          <template x-if="loading">
+            <template x-for="_ in [1,2,3,4,5]" :key="_">
+              <tr class="ts-skeleton-row">
+                <td><div class="ts-skeleton-cell w-4"></div></td>
+                <td><div class="ts-skeleton-cell w-48"></div></td>
+                <td><div class="ts-skeleton-cell w-24"></div></td>
+                <td class="hidden sm:table-cell"><div class="ts-skeleton-cell w-32"></div></td>
+                <td class="hidden sm:table-cell"><div class="ts-skeleton-cell w-16 ml-auto"></div></td>
+                <td class="hidden md:table-cell"><div class="ts-skeleton-cell w-12 ml-auto"></div></td>
+                <td></td>
+              </tr>
+            </template>
+          </template>
+
+          <!-- Empty state -->
+          <template x-if="!loading && filteredKeywords.length === 0">
+            <tr>
+              <td colspan="7">
+                <div class="ts-empty-state">
+                  <div class="ts-empty-icon"><i data-lucide="key" class="w-6 h-6 text-slate-400"></i></div>
+                  <p class="text-slate-500 mt-3 text-sm">No keywords found. Import CSV or add manually.</p>
+                </div>
+              </td>
+            </tr>
+          </template>
+
+          <!-- Data rows -->
+          <template x-for="kw in paginatedKeywords" :key="kw.keyword_id">
+            <tr>
+              <td>
+                <input type="checkbox" :checked="selectedIds.includes(kw.keyword_id)"
+                  @change="toggleSelect(kw.keyword_id, $event.target.checked)" class="rounded">
+              </td>
+              <td>
+                <div class="font-medium" x-text="kw.keyword"></div>
+                <!-- Hiện cluster + volume inline trên mobile -->
+                <div class="text-xs text-slate-400 mt-0.5 sm:hidden">
+                  <span x-text="kw.cluster_group || ''"></span>
+                  <span x-show="kw.search_volume"> · Vol: <span x-text="fmtNumber(kw.search_volume)"></span></span>
+                </div>
+              </td>
+              <td>
+                <span class="ts-badge-intent" :class="`ts-badge-${kw.intent || 'none'}`"
+                  x-text="kw.intent || '—'"></span>
+              </td>
+              <td x-text="kw.cluster_group || '—'" class="text-slate-500 text-xs hidden sm:table-cell"></td>
+              <td class="text-right text-slate-600 hidden sm:table-cell" x-text="fmtNumber(kw.search_volume)"></td>
+              <td class="text-right hidden md:table-cell" x-text="kw.current_position || '—'"></td>
+              <td>
+                <div class="flex gap-1">
+                  <sl-button size="small" variant="text" @click="openEditModal(kw)">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                  </sl-button>
+                  <sl-button size="small" variant="text" @click="deleteKeyword(kw.keyword_id)">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500"></i>
+                  </sl-button>
+                </div>
+              </td>
+            </tr>
+          </template>
+
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex items-center justify-between px-3 sm:px-4 py-3 border-t border-slate-100">
+      <span class="text-xs text-slate-500" x-text="pageInfo"></span>
+      <div class="flex gap-2">
+        <sl-button size="small" variant="default" :disabled="page === 1" @click="page--">Previous</sl-button>
+        <sl-button size="small" variant="default" :disabled="page === totalPages" @click="page++">Next</sl-button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- Add/Edit Keyword Modal -->
+  <sl-dialog id="keyword-dialog" :label="editingId ? 'Edit Keyword' : 'Add Keyword'"
+    :open="showModal" @sl-hide="showModal = false">
+    <div class="space-y-4">
+      <sl-input id="kw-keyword" label="Keyword" placeholder="Enter keyword..." x-model="form.keyword" required></sl-input>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <sl-input id="kw-volume" label="Search Volume" type="number" x-model="form.search_volume"></sl-input>
+        <sl-input id="kw-difficulty" label="Difficulty" type="number" min="0" max="100" x-model="form.difficulty"></sl-input>
+      </div>
+      <sl-select id="kw-intent" label="Intent" x-model="form.intent">
+        <sl-option value="">Select intent...</sl-option>
+        <sl-option value="informational">Informational</sl-option>
+        <sl-option value="commercial">Commercial</sl-option>
+        <sl-option value="transactional">Transactional</sl-option>
+        <sl-option value="navigational">Navigational</sl-option>
+      </sl-select>
+      <sl-input id="kw-cluster" label="Cluster Group" placeholder="e.g. Technical SEO" x-model="form.cluster_group"></sl-input>
+    </div>
+    <div slot="footer" class="flex gap-2 justify-end">
+      <sl-button @click="showModal = false">Cancel</sl-button>
+      <sl-button variant="primary" :loading="saving" @click="saveKeyword()">Save</sl-button>
+    </div>
+  </sl-dialog>
+
+  <!-- Import CSV Modal -->
+  <sl-dialog id="import-csv-dialog" label="Import Keywords from CSV"
+    :open="showImportModal" @sl-hide="showImportModal = false">
+    <div class="space-y-3">
+      <p class="text-sm text-slate-600">Paste CSV data below. First row = headers. Required column: <code>keyword</code></p>
+      <textarea id="csv-textarea"
+        x-model="csvText"
+        rows="8"
+        placeholder="keyword,search_volume,difficulty,intent,cluster_group&#10;SEO audit,2400,45,informational,Technical SEO"
+        class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono resize-y focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      ></textarea>
+      <p class="text-xs text-slate-400" x-show="csvPreviewCount > 0">
+        <span x-text="csvPreviewCount"></span> rows detected
+      </p>
+    </div>
+    <div slot="footer" class="flex gap-2 justify-end">
+      <sl-button @click="showImportModal = false">Cancel</sl-button>
+      <sl-button variant="primary" :loading="importing" :disabled="csvPreviewCount === 0" @click="importCSV()">
+        Import <span x-show="csvPreviewCount > 0">(<span x-text="csvPreviewCount"></span>)</span>
+      </sl-button>
+    </div>
+  </sl-dialog>
+
+</div>
+
+<script>
+function keywordsPage() {
+  return {
+    keywords: [],
+    loading: false,
+    saving: false,
+    deleting: false,
+    classifying: false,
+    applying: false,
+    importing: false,
+    searchQuery: '',
+    filters: { intent: '', cluster: '' },
+    page: 1,
+    pageSize: 50,
+    selectedIds: [],
+    aiPreview: null,
+    showModal: false,
+    showImportModal: false,
+    editingId: null,
+    csvText: '',
+    form: { keyword: '', search_volume: '', difficulty: '', intent: '', cluster_group: '' },
+
+    get clusters() {
+      return [...new Set(this.keywords.map(k => k.cluster_group).filter(Boolean))].sort();
+    },
+
+    get filteredKeywords() {
+      let rows = this.keywords;
+      if (this.searchQuery) {
+        const q = this.searchQuery.toLowerCase();
+        rows = rows.filter(k => k.keyword.toLowerCase().includes(q));
+      }
+      if (this.filters.intent) rows = rows.filter(k => k.intent === this.filters.intent);
+      if (this.filters.cluster) rows = rows.filter(k => k.cluster_group === this.filters.cluster);
+      return rows;
+    },
+
+    get totalPages() { return Math.ceil(this.filteredKeywords.length / this.pageSize) || 1; },
+    get paginatedKeywords() {
+      const start = (this.page - 1) * this.pageSize;
+      return this.filteredKeywords.slice(start, start + this.pageSize);
+    },
+    get pageInfo() { return `Page ${this.page} of ${this.totalPages} (${this.filteredKeywords.length} total)`; },
+    get csvPreviewCount() {
+      if (!this.csvText.trim()) return 0;
+      return this.csvText.trim().split('\n').length - 1;
+    },
+
+    async init() {
+      // Lấy projectId từ parent appShell
+    },
+
+    async onProjectChange(projectId) {
+      this.keywords = [];
+      this.selectedIds = [];
+      this.aiPreview = null;
+      await this.loadKeywords(projectId);
+    },
+
+    _getProjectId() {
+      let el = this.$el;
+      while (el) {
+        if (el.__x?.$data?.currentProjectId) return el.__x.$data.currentProjectId;
+        el = el.parentElement;
+      }
+      return null;
+    },
+
+    async loadKeywords(projectId) {
+      const pid = projectId || this._getProjectId();
+      if (!pid) return;
+      this.loading = true;
+      try {
+        this.keywords = await callServer('keyword.getAll', { projectId: pid }) || [];
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        this.$dispatch('show-toast', { message: e.message, type: 'danger' });
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    openAddModal() {
+      this.editingId = null;
+      this.form = { keyword: '', search_volume: '', difficulty: '', intent: '', cluster_group: '' };
+      this.showModal = true;
+    },
+
+    openEditModal(kw) {
+      this.editingId = kw.keyword_id;
+      this.form = { keyword: kw.keyword, search_volume: kw.search_volume, difficulty: kw.difficulty, intent: kw.intent, cluster_group: kw.cluster_group };
+      this.showModal = true;
+    },
+
+    async saveKeyword() {
+      if (!this.form.keyword.trim()) {
+        this.$dispatch('show-toast', { message: 'Keyword is required', type: 'warning' });
+        return;
+      }
+      const pid = this._getProjectId();
+      this.saving = true;
+      try {
+        if (this.editingId) {
+          const updated = await callServer('keyword.update', { projectId: pid, keywordId: this.editingId, data: this.form });
+          const idx = this.keywords.findIndex(k => k.keyword_id === this.editingId);
+          if (idx !== -1) this.keywords[idx] = { ...this.keywords[idx], ...updated };
+          this.$dispatch('show-toast', { message: 'Keyword updated', type: 'success' });
+        } else {
+          const added = await callServer('keyword.add', { projectId: pid, data: this.form });
+          this.keywords.push(added);
+          this.$dispatch('show-toast', { message: 'Keyword added', type: 'success' });
+        }
+        this.showModal = false;
+      } catch (e) {
+        this.$dispatch('show-toast', { message: e.message, type: 'danger' });
+      } finally {
+        this.saving = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async deleteKeyword(keywordId) {
+      if (!confirm('Delete this keyword?')) return;
+      const pid = this._getProjectId();
+      try {
+        await callServer('keyword.delete', { projectId: pid, keywordId });
+        this.keywords = this.keywords.filter(k => k.keyword_id !== keywordId);
+        this.$dispatch('show-toast', { message: 'Keyword deleted', type: 'success' });
+      } catch (e) {
+        this.$dispatch('show-toast', { message: e.message, type: 'danger' });
+      }
+    },
+
+    toggleSelect(id, checked) {
+      if (checked) { if (!this.selectedIds.includes(id)) this.selectedIds.push(id); }
+      else { this.selectedIds = this.selectedIds.filter(i => i !== id); }
+    },
+
+    toggleSelectAll(checked) {
+      this.selectedIds = checked ? this.paginatedKeywords.map(k => k.keyword_id) : [];
+    },
+
+    async classifySelected() {
+      const keywords = this.keywords.filter(k => this.selectedIds.includes(k.keyword_id)).map(k => k.keyword);
+      if (keywords.length === 0) return;
+      this.classifying = true;
+      try {
+        this.aiPreview = await callServer('keyword.classify', { keywords });
+        this.aiPreview = this.aiPreview.map(p => ({
+          ...p,
+          keyword_id: this.keywords.find(k => k.keyword.toLowerCase() === p.keyword.toLowerCase())?.keyword_id
+        }));
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        this.$dispatch('show-toast', { message: e.message, type: 'danger' });
+      } finally {
+        this.classifying = false;
+      }
+    },
+
+    async applyAIPreview() {
+      const pid = this._getProjectId();
+      const updates = this.aiPreview.filter(p => p.keyword_id).map(p => ({ keyword_id: p.keyword_id, intent: p.intent }));
+      this.applying = true;
+      try {
+        await callServer('keyword.applyIntents', { projectId: pid, updates });
+        updates.forEach(u => {
+          const kw = this.keywords.find(k => k.keyword_id === u.keyword_id);
+          if (kw) kw.intent = u.intent;
+        });
+        this.aiPreview = null;
+        this.selectedIds = [];
+        this.$dispatch('show-toast', { message: `Applied ${updates.length} intent classifications`, type: 'success' });
+      } catch (e) {
+        this.$dispatch('show-toast', { message: e.message, type: 'danger' });
+      } finally {
+        this.applying = false;
+      }
+    },
+
+    openImportModal() {
+      this.csvText = '';
+      this.showImportModal = true;
+    },
+
+    async importCSV() {
+      const pid = this._getProjectId();
+      const rows = parseCSV(this.csvText);
+      if (rows.length === 0) { this.$dispatch('show-toast', { message: 'No valid rows found', type: 'warning' }); return; }
+      this.importing = true;
+      try {
+        const result = await callServer('keyword.bulkAdd', { projectId: pid, rows });
+        this.showImportModal = false;
+        await this.loadKeywords(pid);
+        this.$dispatch('show-toast', { message: `Imported ${result.imported} keywords`, type: 'success' });
+      } catch (e) {
+        this.$dispatch('show-toast', { message: e.message, type: 'danger' });
+      } finally {
+        this.importing = false;
+      }
+    }
+  };
+}
+</script>

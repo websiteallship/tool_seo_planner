@@ -1,0 +1,169 @@
+<div x-show="currentPage === 'outlines'" x-data="outlinesPage()" @project-changed.window="onProjectChange($event.detail.projectId)">
+<div class="ts-page">
+
+  <div class="ts-page-header">
+    <div>
+      <h1 class="ts-page-title">Content Outlines</h1>
+      <p class="ts-page-subtitle" x-text="`${outlines.length} outlines`"></p>
+    </div>
+    <sl-button size="small" variant="primary" @click="openCreateModal()">
+      <i data-lucide="plus" class="w-3.5 h-3.5" slot="prefix"></i>
+      New Outline
+    </sl-button>
+  </div>
+
+  <!-- Table -->
+  <div class="ts-table-container">
+    <div class="ts-table-scroll">
+      <table class="ts-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Status</th>
+            <th class="hidden sm:table-cell">Assignee</th>
+            <th class="hidden md:table-cell">Due Date</th>
+            <th class="hidden md:table-cell">Doc</th>
+            <th class="w-24">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-if="loading">
+            <template x-for="_ in [1,2,3]">
+              <tr class="ts-skeleton-row">
+                <td><div class="ts-skeleton-cell w-48"></div></td>
+                <td><div class="ts-skeleton-cell w-20"></div></td>
+                <td class="hidden sm:table-cell"><div class="ts-skeleton-cell w-24"></div></td>
+                <td class="hidden md:table-cell"><div class="ts-skeleton-cell w-24"></div></td>
+                <td class="hidden md:table-cell"><div class="ts-skeleton-cell w-16"></div></td>
+                <td></td>
+              </tr>
+            </template>
+          </template>
+
+          <template x-if="!loading && outlines.length === 0">
+            <tr><td colspan="6">
+              <div class="ts-empty-state">
+                <div class="ts-empty-icon"><i data-lucide="file-text" class="w-6 h-6 text-slate-400"></i></div>
+                <p class="text-slate-500 mt-3 text-sm">No outlines yet. Create your first content outline.</p>
+              </div>
+            </td></tr>
+          </template>
+
+          <template x-for="o in outlines" :key="o.outline_id">
+            <tr @click="openDetailModal(o)" class="cursor-pointer">
+              <td>
+                <div class="font-medium" x-text="o.title"></div>
+                <div class="text-xs text-slate-400 mt-0.5 sm:hidden" x-text="o.assignee || ''"></div>
+              </td>
+              <td>
+                <span class="ts-badge-status" :class="`ts-badge-${o.status}`" x-text="o.status"></span>
+              </td>
+              <td x-text="o.assignee || '—'" class="text-slate-500 text-sm hidden sm:table-cell"></td>
+              <td x-text="o.due_date || '—'" class="text-slate-500 text-sm hidden md:table-cell"></td>
+              <td class="hidden md:table-cell">
+                <template x-if="o.doc_url">
+                  <a :href="o.doc_url" target="_blank" @click.stop class="text-indigo-600 text-sm flex items-center gap-1">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Doc
+                  </a>
+                </template>
+                <template x-if="!o.doc_url"><span class="text-slate-400 text-sm">—</span></template>
+              </td>
+              <td @click.stop>
+                <div class="flex gap-1">
+                  <sl-button size="small" variant="text" :loading="generatingId === o.outline_id" @click="exportDoc(o)">
+                    <i data-lucide="file-up" class="w-3.5 h-3.5"></i>
+                  </sl-button>
+                  <sl-button size="small" variant="text" @click="deleteOutline(o.outline_id)">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500"></i>
+                  </sl-button>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+  <!-- Create Outline Modal -->
+  <sl-dialog id="outline-create-dialog" label="New Outline" :open="showCreateModal" @sl-hide="showCreateModal = false">
+    <div class="space-y-4">
+      <sl-input id="outline-title" label="Title" placeholder="The Complete Guide to..." x-model="form.title" required></sl-input>
+      <sl-input id="outline-assignee" label="Assignee" placeholder="Writer name" x-model="form.assignee"></sl-input>
+      <sl-input id="outline-due-date" label="Due Date" type="date" x-model="form.due_date"></sl-input>
+      <div class="flex items-center gap-2 p-3 bg-indigo-50 rounded-lg">
+        <i data-lucide="sparkles" class="w-4 h-4 text-indigo-600 shrink-0"></i>
+        <span class="text-sm text-indigo-700">AI Generate outline from Silo node (optional)</span>
+      </div>
+      <sl-select id="outline-silo" label="Generate from Silo Page" x-model="form.silo_id">
+        <sl-option value="">Create manually</sl-option>
+        <template x-for="s in siloOptions" :key="s.silo_id">
+          <sl-option :value="s.silo_id" x-text="s.page_title"></sl-option>
+        </template>
+      </sl-select>
+    </div>
+    <div slot="footer" class="flex gap-2 justify-end">
+      <sl-button @click="showCreateModal = false">Cancel</sl-button>
+      <sl-button variant="primary" :loading="creating" @click="createOutline()">Create</sl-button>
+    </div>
+  </sl-dialog>
+
+</div>
+
+<script>
+function outlinesPage() {
+  return {
+    outlines: [], siloOptions: [], loading: false, creating: false, generatingId: null,
+    showCreateModal: false, form: { title: '', assignee: '', due_date: '', silo_id: '' },
+
+    async onProjectChange(pid) { this.outlines = []; await Promise.all([this.loadOutlines(pid), this.loadSiloOptions(pid)]); },
+
+    _getProjectId() { let el = this.$el; while (el) { if (el.__x?.$data?.currentProjectId) return el.__x.$data.currentProjectId; el = el.parentElement; } return null; },
+
+    async loadOutlines(projectId) {
+      const pid = projectId || this._getProjectId(); if (!pid) return;
+      this.loading = true;
+      try { this.outlines = await callServer('outline.getAll', { projectId: pid }) || []; this.$nextTick(() => lucide.createIcons()); }
+      catch (e) { this.$dispatch('show-toast', { message: e.message, type: 'danger' }); }
+      finally { this.loading = false; }
+    },
+
+    async loadSiloOptions(projectId) {
+      const pid = projectId || this._getProjectId(); if (!pid) return;
+      try { const tree = await callServer('silo.getTree', { projectId: pid }); const flat = []; const flatten = (nodes) => nodes.forEach(n => { flat.push(n); flatten(n.children || []); }); flatten(tree || []); this.siloOptions = flat; } catch (e) { /* non-critical */ }
+    },
+
+    openCreateModal() { this.form = { title: '', assignee: '', due_date: '', silo_id: '' }; this.showCreateModal = true; },
+
+    async createOutline() {
+      const pid = this._getProjectId();
+      if (!this.form.title.trim() && !this.form.silo_id) { this.$dispatch('show-toast', { message: 'Title or Silo page is required', type: 'warning' }); return; }
+      this.creating = true;
+      try {
+        let outline;
+        if (this.form.silo_id) {
+          const ai = await callServer('outline.generate', { projectId: pid, siloId: this.form.silo_id });
+          outline = await callServer('outline.create', { projectId: pid, data: { title: ai.title || this.form.title, silo_id: this.form.silo_id, assignee: this.form.assignee, due_date: this.form.due_date, content_json: ai } });
+        } else { outline = await callServer('outline.create', { projectId: pid, data: this.form }); }
+        this.outlines.push(outline); this.showCreateModal = false;
+        this.$dispatch('show-toast', { message: 'Outline created', type: 'success' });
+      } catch (e) { this.$dispatch('show-toast', { message: e.message, type: 'danger' }); }
+      finally { this.creating = false; this.$nextTick(() => lucide.createIcons()); }
+    },
+
+    async exportDoc(outline) {
+      const pid = this._getProjectId(); this.generatingId = outline.outline_id;
+      try { const r = await callServer('outline.exportDoc', { projectId: pid, outlineId: outline.outline_id }); outline.doc_url = r.doc_url; window.open(r.doc_url, '_blank'); this.$dispatch('show-toast', { message: 'Google Doc exported', type: 'success' }); }
+      catch (e) { this.$dispatch('show-toast', { message: e.message, type: 'danger' }); }
+      finally { this.generatingId = null; }
+    },
+
+    async deleteOutline(outlineId) {
+      if (!confirm('Delete this outline?')) return; const pid = this._getProjectId();
+      try { await callServer('outline.delete', { projectId: pid, outlineId }); this.outlines = this.outlines.filter(o => o.outline_id !== outlineId); this.$dispatch('show-toast', { message: 'Outline deleted', type: 'success' }); }
+      catch (e) { this.$dispatch('show-toast', { message: e.message, type: 'danger' }); }
+    }
+  };
+}
+</script>

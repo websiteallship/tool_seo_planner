@@ -1,0 +1,4 @@
+.agent/skills-old/
+node_modules/
+.clasp.json
+.env

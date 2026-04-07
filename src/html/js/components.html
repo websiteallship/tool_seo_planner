@@ -1,0 +1,76 @@
+<script>
+/**
+ * components.html — Shared Alpine component helpers
+ * Pagination, CSV parser, debounce, format helpers
+ */
+
+/**
+ * Pagination component — dùng trong mọi table
+ * @example x-data="pagination(filteredRows, 50)"
+ */
+function pagination(allItems, pageSize = 50) {
+  return {
+    _allItems: allItems,
+    _pageSize: pageSize,
+    currentPage: 1,
+
+    get totalPages() { return Math.ceil(this._allItems.length / this._pageSize) || 1; },
+    get paginatedItems() {
+      const start = (this.currentPage - 1) * this._pageSize;
+      return this._allItems.slice(start, start + this._pageSize);
+    },
+    get pageInfo() { return `Page ${this.currentPage} of ${this.totalPages}`; },
+
+    prevPage() { if (this.currentPage > 1) this.currentPage--; },
+    nextPage() { if (this.currentPage < this.totalPages) this.currentPage++; },
+    reset() { this.currentPage = 1; }
+  };
+}
+
+/**
+ * Parse CSV text thành array of objects
+ * @param {string} csvText
+ * @param {string[]} [headers] — nếu không có header row
+ * @returns {Object[]}
+ */
+function parseCSV(csvText, headers = null) {
+  const lines = csvText.trim().split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length === 0) return [];
+  const headerRow = headers || lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
+  const dataLines = headers ? lines : lines.slice(1);
+  return dataLines.map(line => {
+    const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+    return Object.fromEntries(headerRow.map((h, i) => [h, values[i] || '']));
+  });
+}
+
+/**
+ * Debounce function
+ */
+function debounce(fn, delay = 300) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
+}
+
+/**
+ * Format số với dấu phẩy ngàn
+ */
+function fmtNumber(n) {
+  return Number(n || 0).toLocaleString();
+}
+
+/**
+ * Format % đơn giản
+ */
+function fmtPct(n) {
+  return `${Number(n || 0).toFixed(1)}%`;
+}
+
+/**
+ * Truncate text với ellipsis
+ */
+function truncate(str, len = 50) {
+  if (!str) return '';
+  return str.length > len ? str.slice(0, len) + '…' : str;
+}
+</script>

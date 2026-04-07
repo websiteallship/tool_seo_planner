@@ -1,0 +1,246 @@
+<style type="text/tailwindcss">
+/* ToolSEO — Premium Design System (ts- prefix) */
+
+/* ─── Global & Animations ────────────────────────────────────── */
+* { font-family: 'Inter', sans-serif; }
+
+/* Fix GAS WebApp iframe: đảm bảo html/body chiếm toàn màn hình để overlay phủ đúng */
+html, body { height: 100%; min-height: 100%; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Navigation ─────────────────────────────────────────────── */
+.ts-nav-section-label {
+  @apply text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em] px-4 pt-6 pb-2;
+}
+
+.ts-nav-item {
+  @apply flex items-center gap-3 px-3 py-2.5 mx-2 rounded-xl text-sm font-medium text-slate-600
+         hover:bg-slate-100/80 hover:text-slate-900 transition-all duration-200 cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-indigo-100;
+}
+
+.ts-nav-item--active {
+  @apply bg-indigo-50 text-indigo-700 font-semibold shadow-[inset_3px_0_0_0_#4f46e5];
+}
+
+.ts-nav-item:disabled {
+  @apply opacity-50 cursor-not-allowed pointer-events-none;
+}
+
+/* ─── Page Layout ────────────────────────────────────────────── */
+.ts-page {
+  @apply space-y-6 sm:space-y-8 animate-[fadeIn_0.4s_ease-out_forwards];
+}
+
+.ts-page-header {
+  @apply flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8 pb-4 sm:pb-5 border-b border-slate-200/70;
+}
+
+.ts-page-title {
+  @apply text-xl sm:text-2xl font-bold tracking-tight text-slate-900;
+}
+
+.ts-page-subtitle {
+  @apply text-xs sm:text-sm text-slate-500 mt-1 sm:mt-1.5 font-medium;
+}
+
+/* ─── Stat Cards ─────────────────────────────────────────────── */
+.ts-stat-card {
+  @apply bg-white/70 backdrop-blur-xl rounded-2xl border border-slate-200/60 p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 
+         shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300;
+}
+
+.ts-stat-icon {
+  @apply w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100/50 flex items-center justify-center
+         text-indigo-600 shadow-inner ring-1 ring-indigo-100;
+}
+
+.ts-stat-value {
+  @apply text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight;
+}
+
+.ts-stat-label {
+  @apply text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest;
+}
+
+/* ─── Table ──────────────────────────────────────────────────── */
+.ts-table-container {
+  @apply bg-white/70 backdrop-blur-xl rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm;
+}
+
+/* Horizontal scroll wrapper cho mobile */
+.ts-table-scroll {
+  @apply overflow-x-auto -mx-0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ts-table {
+  @apply w-full text-sm text-left;
+  min-width: 600px;
+}
+
+.ts-table thead th {
+  @apply sticky top-0 bg-slate-50/90 backdrop-blur-md text-xs font-bold text-slate-500 uppercase
+         tracking-wider px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-200/80;
+}
+
+.ts-table tbody tr {
+  @apply border-b border-slate-100 hover:bg-slate-50/80 transition-colors duration-150;
+}
+
+.ts-table tbody tr:last-child { @apply border-b-0; }
+
+.ts-table tbody td {
+  @apply px-3 sm:px-5 py-3 sm:py-4 text-slate-700;
+}
+
+/* Skeleton loader */
+.ts-skeleton-row td { @apply animate-pulse; }
+.ts-skeleton-cell { @apply h-4 bg-slate-200 rounded-md; }
+
+/* ─── Intent Badges (SEO) ────────────────────────────────────── */
+.ts-badge-intent {
+  @apply inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-xs font-bold tracking-wide whitespace-nowrap;
+}
+
+.ts-badge-informational  { @apply bg-blue-50 text-blue-700 ring-1 ring-blue-600/20; }
+.ts-badge-commercial     { @apply bg-orange-50 text-orange-700 ring-1 ring-orange-600/20; }
+.ts-badge-transactional  { @apply bg-green-50 text-green-700 ring-1 ring-green-600/20; }
+.ts-badge-navigational   { @apply bg-slate-100 text-slate-700 ring-1 ring-slate-600/20; }
+.ts-badge-none           { @apply bg-slate-50 text-slate-400 ring-1 ring-slate-400/20; }
+
+/* ─── Status Badges ──────────────────────────────────────────── */
+.ts-badge-status {
+  @apply inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-bold tracking-wide whitespace-nowrap;
+}
+
+.ts-badge-active, .ts-badge-pass, .ts-badge-live {
+  @apply bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20;
+}
+.ts-badge-paused, .ts-badge-in_progress, .ts-badge-pending {
+  @apply bg-amber-50 text-amber-700 ring-1 ring-amber-600/20;
+}
+.ts-badge-completed, .ts-badge-approved, .ts-badge-draft {
+  @apply bg-blue-50 text-blue-700 ring-1 ring-blue-600/20;
+}
+.ts-badge-archived, .ts-badge-na {
+  @apply bg-slate-100 text-slate-500 ring-1 ring-slate-400/20;
+}
+.ts-badge-fail, .ts-badge-critical, .ts-badge-lost {
+  @apply bg-rose-50 text-rose-700 ring-1 ring-rose-600/20;
+}
+
+/* ─── AI Preview Panel ───────────────────────────────────────── */
+.ts-ai-preview-panel {
+  @apply bg-gradient-to-br from-indigo-50/80 to-violet-50/50 border border-indigo-200/60 rounded-2xl p-4 sm:p-5 shadow-sm backdrop-blur-sm;
+}
+
+.ts-ai-badge {
+  @apply flex items-center gap-2 text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 mb-3 sm:mb-4;
+}
+
+/* ─── Toast ──────────────────────────────────────────────────── */
+.ts-toast {
+  @apply flex items-start gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-sm
+         w-full sm:min-w-[300px] sm:max-w-[400px] sm:w-auto bg-white/95 backdrop-blur-xl border border-slate-200/80;
+}
+
+.ts-toast--success { @apply border-l-[4px] border-l-emerald-500; }
+.ts-toast--danger  { @apply border-l-[4px] border-l-rose-500; }
+.ts-toast--warning { @apply border-l-[4px] border-l-amber-500; }
+.ts-toast--neutral { @apply border-l-[4px] border-l-slate-400; }
+
+.ts-toast i[data-lucide] { @apply mt-0.5; }
+.ts-toast--success i[data-lucide] { @apply text-emerald-500; }
+.ts-toast--danger i[data-lucide]  { @apply text-rose-500; }
+.ts-toast--warning i[data-lucide] { @apply text-amber-500; }
+.ts-toast--neutral i[data-lucide] { @apply text-slate-400; }
+
+/* ─── Empty State ────────────────────────────────────────────── */
+.ts-empty-state {
+  @apply flex flex-col items-center justify-center p-8 sm:p-16 text-center bg-slate-50/30 rounded-3xl border-2 border-dashed border-slate-200 m-4 sm:m-8;
+}
+
+.ts-empty-icon {
+  @apply w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white shadow-sm ring-1 ring-slate-100 flex items-center justify-center text-indigo-400 mb-4 sm:mb-6;
+}
+
+/* ─── Card ───────────────────────────────────────────────────── */
+.ts-card {
+  @apply bg-white/70 backdrop-blur-xl rounded-2xl border border-slate-200/60 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-300;
+}
+
+/* ─── Filter Bar (responsive) ────────────────────────────────── */
+.ts-filter-bar {
+  @apply flex flex-wrap items-center gap-2 sm:gap-3 mb-4;
+}
+
+/* ─── Mobile Action Buttons — luôn hiện trên touch devices ──── */
+@media (hover: none) and (pointer: coarse) {
+  .group .group-hover\:opacity-100 {
+    opacity: 1 !important;
+  }
+}
+
+/* ─── Scrollbar (Webkit) ─────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ─── Shoelace overrides ─────────────────────────────────────── */
+sl-button::part(base) {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+sl-input::part(base), sl-select::part(combobox), sl-textarea::part(base) {
+  font-family: 'Inter', sans-serif;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+sl-dialog::part(overlay) {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+sl-dialog::part(panel) {
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  max-width: min(560px, calc(100vw - 2rem));
+  width: 100%;
+  max-height: calc(100vh - 4rem);
+  overflow: hidden;
+}
+
+sl-dialog::part(body) {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ─── Shoelace dialog mobile full-width ──────────────────────── */
+@media (max-width: 640px) {
+  sl-dialog::part(panel) {
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100vh - 3rem);
+  }
+}
+</style>

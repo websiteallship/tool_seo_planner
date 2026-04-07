@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToolSEO Planner</title>
+
+  <!-- Shoelace Web Components (CDN) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/themes/light.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/shoelace-autoloader.js"></script>
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS (CDN for MVP) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+
+  <!-- App Styles -->
+  <?!= include('html/css/styles') ?>
+</head>
+
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen" x-data="appShell()">
+
+  <!-- ── Top Bar ──────────────────────────────────────────────── -->
+  <header id="top-bar" class="fixed top-0 left-0 right-0 h-12 bg-white border-b border-slate-200 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 z-50">
+    <!-- Mobile Hamburger -->
+    <button @click="toggleSidebar()" class="lg:hidden p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors focus:outline-none" id="sidebar-toggle">
+      <i data-lucide="menu" class="w-5 h-5"></i>
+    </button>
+
+    <!-- Logo -->
+    <div class="flex items-center gap-2 font-semibold text-indigo-600 shrink-0 lg:w-[220px]">
+      <i data-lucide="zap" class="w-5 h-5"></i>
+      <span class="hidden sm:inline">ToolSEO</span>
+    </div>
+
+    <!-- Project Switcher -->
+    <div class="flex-1 flex items-center gap-2 min-w-0">
+      <sl-select
+        id="project-switcher"
+        size="small"
+        placeholder="Select project..."
+        :value="currentProjectId"
+        @sl-change="switchProject($event.target.value)"
+        class="w-full max-w-[280px]"
+      >
+        <template x-for="p in projects" :key="p.project_id">
+          <sl-option :value="p.project_id" x-text="p.name"></sl-option>
+        </template>
+      </sl-select>
+    </div>
+
+    <!-- Right: Sync + Settings -->
+    <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+      <sl-button size="small" variant="default" :loading="syncing" @click="syncGSC()" x-show="currentProjectId">
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5" slot="prefix"></i>
+        <span class="hidden sm:inline">Sync GSC</span>
+      </sl-button>
+      <button @click="navigate('settings')" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors focus:outline-none">
+        <i data-lucide="settings" class="w-5 h-5"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Layout: Sidebar + Content ────────────────────────────── -->
+  <div class="flex pt-12 min-h-screen">
+
+    <!-- Mobile Sidebar Overlay Backdrop -->
+    <div
+      class="fixed inset-0 bg-black/40 z-30 lg:hidden transition-opacity duration-300"
+      :class="sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'"
+      @click="sidebarOpen = false"
+    ></div>
+
+    <!-- Sidebar Navigation -->
+    <aside
+      id="sidebar"
+      class="fixed left-0 top-12 bottom-0 w-[260px] sm:w-[220px] bg-white border-r border-slate-200 overflow-y-auto z-40
+             transition-transform duration-300 ease-in-out
+             lg:translate-x-0"
+      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+    >
+      <nav class="p-3 space-y-0.5">
+
+        <!-- Phase 1 — Core MVP -->
+        <div class="ts-nav-section-label">Core</div>
+
+        <!-- Core Navigation Items -->
+        <button id="nav-projects" @click="navigate('projects')" class="ts-nav-item w-full" :class="currentPage === 'projects' ? 'ts-nav-item--active' : ''">
+          <i data-lucide="folder" class="w-4 h-4 flex-shrink-0"></i>
+          <span>Projects</span>
+        </button>
+
+        <button id="nav-dashboard" @click="navigate('dashboard')" class="ts-nav-item w-full" :class="currentPage === 'dashboard' ? 'ts-nav-item--active' : ''" :disabled="!currentProjectId">
+          <i data-lucide="layout-dashboard" class="w-4 h-4 flex-shrink-0"></i>
+          <span>Dashboard</span>
+        </button>
+
+        <button id="nav-keywords" @click="navigate('keywords')" class="ts-nav-item w-full" :class="currentPage === 'keywords' ? 'ts-nav-item--active' : ''" :disabled="!currentProjectId">
+          <i data-lucide="key" class="w-4 h-4 flex-shrink-0"></i>
+          <span>Keywords</span>
+        </button>
+
+        <button id="nav-silo" @click="navigate('silo')" class="ts-nav-item w-full" :class="currentPage === 'silo' ? 'ts-nav-item--active' : ''" :disabled="!currentProjectId">
+          <i data-lucide="network" class="w-4 h-4 flex-shrink-0"></i>
+          <span>Silo Structure</span>
+        </button>
+
+        <button id="nav-outlines" @click="navigate('outlines')" class="ts-nav-item w-full" :class="currentPage === 'outlines' ? 'ts-nav-item--active' : ''" :disabled="!currentProjectId">
+          <i data-lucide="file-text" class="w-4 h-4 flex-shrink-0"></i>
+          <span>Outlines</span>
+        </button>
+
+        <button id="nav-audit" @click="navigate('audit')" class="ts-nav-item w-full" :class="currentPage === 'audit' ? 'ts-nav-item--active' : ''" :disabled="!currentProjectId">
+          <i data-lucide="clipboard-check" class="w-4 h-4 flex-shrink-0"></i>
+          <span>Tech Audit</span>
+        </button>
+
+        <button id="nav-settings" @click="navigate('settings')" class="ts-nav-item w-full" :class="currentPage === 'settings' ? 'ts-nav-item--active' : ''">
+          <i data-lucide="settings" class="w-4 h-4 flex-shrink-0"></i>
+          <span>Settings</span>
+        </button>
+
+      </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main id="main-content" class="flex-1 p-3 sm:p-4 lg:p-6 ml-0 lg:ml-[220px] w-full min-w-0">
+
+      <!-- No Project Selected State -->
+      <template x-if="!currentProjectId && currentPage !== 'settings' && currentPage !== 'projects'">
+        <div class="flex flex-col items-center justify-center h-[60vh] text-center px-4">
+          <div class="ts-empty-icon">
+            <i data-lucide="folder-open" class="w-12 h-12 text-slate-300"></i>
+          </div>
+          <h2 class="text-lg sm:text-xl font-semibold text-slate-600 mt-4">No Project Selected</h2>
+          <p class="text-slate-400 mt-2 mb-6 text-sm sm:text-base">Create a new project or select an existing one to get started.</p>
+          <sl-button variant="primary" @click="openNewProjectModal()">
+            <i data-lucide="plus" class="w-4 h-4" slot="prefix"></i>
+            Create First Project
+          </sl-button>
+        </div>
+      </template>
+
+      <!-- Page Router -->
+      <template x-if="currentProjectId || currentPage === 'settings' || currentPage === 'projects'">
+        <div id="page-container">
+          <!-- Pages được inject bằng include() -->
+          <?!= include('html/pages/projects') ?>
+          <?!= include('html/pages/dashboard') ?>
+          <?!= include('html/pages/keywords') ?>
+          <?!= include('html/pages/silo') ?>
+          <?!= include('html/pages/outlines') ?>
+          <?!= include('html/pages/audit') ?>
+          <?!= include('html/pages/settings') ?>
+        </div>
+      </template>
+
+    </main>
+  </div>
+
+  <!-- ── Toast Container ──────────────────────────────────────── -->
+  <div id="toast-container" class="fixed bottom-4 right-4 left-4 sm:left-auto z-[100] flex flex-col gap-2" x-data="toastManager()">
+    <template x-for="toast in toasts" :key="toast.id">
+      <div
+        class="ts-toast"
+        :class="`ts-toast--${toast.type}`"
+        x-show="toast.visible"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 translate-y-2"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-end="opacity-0"
+      >
+        <i :data-lucide="toast.icon" class="w-4 h-4 flex-shrink-0"></i>
+        <span x-text="toast.message" class="text-sm flex-1 min-w-0 break-words"></span>
+        <button @click="dismiss(toast.id)" class="ml-auto shrink-0">
+          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </template>
+  </div>
+
+  <!-- ── New Project Modal ─────────────────────────────────────── -->
+  <sl-dialog id="new-project-dialog" label="New Project" :open="showNewProjectModal" @sl-hide="showNewProjectModal = false">
+    <div class="space-y-4">
+      <sl-input id="new-project-name" label="Project Name" placeholder="My SEO Project" x-model="newProject.name" required></sl-input>
+      <sl-input id="new-project-client" label="Client Name" placeholder="Client Corp" x-model="newProject.client_name"></sl-input>
+      <sl-input id="new-project-domain" label="Domain" placeholder="https://example.com" x-model="newProject.domain" required></sl-input>
+      <sl-input id="new-project-gsc" label="GSC Site URL" placeholder="https://example.com/" x-model="newProject.gsc_site_url"></sl-input>
+    </div>
+    <div slot="footer" class="flex gap-2 justify-end">
+      <sl-button @click="showNewProjectModal = false">Cancel</sl-button>
+      <sl-button variant="primary" :loading="creatingProject" @click="createProject()">Create Project</sl-button>
+    </div>
+  </sl-dialog>
+
+  <!-- JS Modules -->
+  <?!= include('html/js/api-client') ?>
+  <?!= include('html/js/app') ?>
+  <?!= include('html/js/components') ?>
+
+</body>
+</html>

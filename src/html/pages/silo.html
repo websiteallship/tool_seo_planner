@@ -1,0 +1,154 @@
+<div x-show="currentPage === 'silo'" x-data="siloPage()" @project-changed.window="onProjectChange($event.detail.projectId)">
+<div class="ts-page">
+
+  <div class="ts-page-header">
+    <div>
+      <h1 class="ts-page-title">Silo Structure</h1>
+      <p class="ts-page-subtitle" x-text="`${totalNodes} pages`"></p>
+    </div>
+    <div class="flex gap-2">
+      <sl-button size="small" variant="primary" @click="openAddModal(null)">
+        <i data-lucide="plus" class="w-3.5 h-3.5" slot="prefix"></i>
+        Add Page
+      </sl-button>
+    </div>
+  </div>
+
+  <!-- Loading skeleton -->
+  <template x-if="loading">
+    <div class="space-y-2">
+      <template x-for="_ in [1,2,3]">
+        <div class="h-10 bg-slate-200 rounded-lg animate-pulse"></div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Tree View -->
+  <template x-if="!loading">
+    <div class="ts-card overflow-x-auto">
+      <template x-if="treeData.length === 0">
+        <div class="ts-empty-state">
+          <div class="ts-empty-icon"><i data-lucide="sitemap" class="w-6 h-6 text-slate-400"></i></div>
+          <p class="text-slate-500 mt-3 text-sm">No silo pages yet. Add your first pillar page.</p>
+        </div>
+      </template>
+
+      <template x-if="treeData.length > 0">
+        <sl-tree class="min-w-0">
+          <template x-for="node in treeData" :key="node.silo_id">
+            <div x-html="renderTreeNode(node)"></div>
+          </template>
+        </sl-tree>
+      </template>
+    </div>
+  </template>
+</div>
+
+  <!-- Add/Edit Modal -->
+  <sl-dialog id="silo-dialog" :label="editingId ? 'Edit Page' : 'Add Page'"
+    :open="showModal" @sl-hide="showModal = false">
+    <div class="space-y-4">
+      <sl-input id="silo-title" label="Page Title" placeholder="SEO Audit Guide" x-model="form.page_title" required></sl-input>
+      <sl-input id="silo-slug" label="URL Slug" placeholder="seo-audit-guide" x-model="form.slug" required></sl-input>
+      <sl-input id="silo-meta-title" label="Meta Title" placeholder="SEO Audit Guide | Your Site" x-model="form.meta_title"></sl-input>
+      <sl-input id="silo-meta-desc" label="Meta Description" x-model="form.meta_description"></sl-input>
+      <sl-select id="silo-status" label="Status" x-model="form.status">
+        <sl-option value="draft">Draft</sl-option>
+        <sl-option value="in_progress">In Progress</sl-option>
+        <sl-option value="approved">Approved</sl-option>
+        <sl-option value="live">Live</sl-option>
+      </sl-select>
+    </div>
+    <div slot="footer" class="flex gap-2 justify-end">
+      <sl-button @click="showModal = false">Cancel</sl-button>
+      <sl-button variant="primary" :loading="saving" @click="saveNode()">Save</sl-button>
+    </div>
+  </sl-dialog>
+
+</div>
+
+<script>
+function siloPage() {
+  return {
+    treeData: [], loading: false, saving: false, showModal: false, editingId: null, parentId: null,
+    form: { page_title: '', slug: '', meta_title: '', meta_description: '', status: 'draft' },
+
+    get totalNodes() {
+      let count = 0;
+      const c = (nodes) => { nodes.forEach(n => { count++; c(n.children || []); }); };
+      c(this.treeData); return count;
+    },
+
+    async onProjectChange(projectId) { this.treeData = []; await this.loadTree(projectId); },
+
+    _getProjectId() { let el = this.$el; while (el) { if (el.__x?.$data?.currentProjectId) return el.__x.$data.currentProjectId; el = el.parentElement; } return null; },
+
+    async loadTree(projectId) {
+      const pid = projectId || this._getProjectId(); if (!pid) return;
+      this.loading = true;
+      try { this.treeData = await callServer('silo.getTree', { projectId: pid }) || []; this.$nextTick(() => lucide.createIcons()); }
+      catch (e) { this.$dispatch('show-toast', { message: e.message, type: 'danger' }); }
+      finally { this.loading = false; }
+    },
+
+    renderTreeNode(node) {
+      const statusClass = `ts-badge-status ts-badge-${node.status || 'draft'}`;
+      const indexBadge = node.index_status === 'PASS'
+        ? `<span class="text-xs text-green-600 ml-1">(indexed)</span>`
+        : node.index_status === 'NOT_INDEXED'
+        ? `<span class="text-xs text-red-500 ml-1">(not indexed)</span>`
+        : '';
+      const children = (node.children || []).map(c => this.renderTreeNode(c)).join('');
+      return `<sl-tree-item>
+        <div class="flex items-center gap-2 sm:gap-3 py-0.5 min-w-0 flex-wrap sm:flex-nowrap">
+          <span class="font-medium text-sm truncate max-w-[150px] sm:max-w-none">${node.page_title}</span>
+          <span class="text-xs text-slate-400 hidden sm:inline">/${node.slug}</span>
+          <span class="${statusClass}">${node.status || 'draft'}</span>
+          ${indexBadge}
+          <div class="flex gap-1 ml-auto shrink-0">
+            <button onclick="document.querySelector('[x-data=\\'siloPage()\\']').__x.$data.openEditModal(${JSON.stringify(node).replace(/"/g, '&quot;')})"
+              class="p-1 text-slate-400 hover:text-slate-600">
+              <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="document.querySelector('[x-data=\\'siloPage()\\']').__x.$data.openAddModal('${node.silo_id}')"
+              class="p-1 text-slate-400 hover:text-indigo-600">
+              <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+        ${children}
+      </sl-tree-item>`;
+    },
+
+    openAddModal(parentId) {
+      this.editingId = null; this.parentId = parentId;
+      this.form = { page_title: '', slug: '', meta_title: '', meta_description: '', status: 'draft' };
+      this.showModal = true;
+    },
+
+    openEditModal(node) {
+      this.editingId = node.silo_id; this.parentId = node.parent_id;
+      this.form = { page_title: node.page_title, slug: node.slug, meta_title: node.meta_title || '', meta_description: node.meta_description || '', status: node.status || 'draft' };
+      this.showModal = true;
+    },
+
+    async saveNode() {
+      const pid = this._getProjectId();
+      if (!this.form.page_title || !this.form.slug) { this.$dispatch('show-toast', { message: 'Title and slug are required', type: 'warning' }); return; }
+      this.saving = true;
+      try {
+        if (this.editingId) {
+          await callServer('silo.update', { projectId: pid, siloId: this.editingId, data: this.form });
+          this.$dispatch('show-toast', { message: 'Page updated', type: 'success' });
+        } else {
+          const level = this.parentId ? 2 : 1;
+          await callServer('silo.add', { projectId: pid, data: { ...this.form, parent_id: this.parentId, level } });
+          this.$dispatch('show-toast', { message: 'Page added', type: 'success' });
+        }
+        this.showModal = false; await this.loadTree(pid);
+      } catch (e) { this.$dispatch('show-toast', { message: e.message, type: 'danger' }); }
+      finally { this.saving = false; }
+    }
+  };
+}
+</script>
